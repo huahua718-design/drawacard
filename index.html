@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Cardtoon - 專業心靈控牌劇場舞台</title>
+    <style>
+        body { 
+            margin: 0; 
+            background-image: url('./image_6.png'); 
+            background-size: 80%;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-color: rgba(0, 0, 0, 0.35); 
+            background-blend-mode: multiply;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            min-height: 100vh; font-family: sans-serif; color: #fff;
+            user-select: none;
+            overscroll-behavior: none;
+            
+            /* 初始狀態固定在最左側暗場 */
+            background-position: -50% center; 
+        }
+
+        /* 🌟 核心修正 1：當 body 被加上 .started 類別時，火柴人進場動畫才啟動 (3秒) */
+        body.started {
+            animation: stickmanEnter 3.0s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+
+        @keyframes stickmanEnter {
+            from { background-position: -50% center; }
+            to { background-position: 25% center; }
+        }
+        
+        #magic-setup { 
+            display: flex; flex-direction: column; align-items: center; 
+            margin-left: 180px; 
+            opacity: 0; 
+        }
+
+        /* 🌟 核心修正 2：當開始後，畫架動畫才正式在第 1.2 秒切入 (2.4秒) */
+        body.started #magic-setup {
+            animation: easelUp 2.4s cubic-bezier(0.175, 0.885, 0.32, 1.1) 1.2s forwards;
+        }
+
+        @keyframes easelUp {
+            from { transform: translateY(100vh); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        #status-text { 
+            text-align: center; margin: 0 0 30px 0; color: #f3c623; font-size: 20px; font-weight: bold;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.9); width: 500px; line-height: 1.5;
+            opacity: 0;
+        }
+        /* 🌟 核心修正 3：引導台詞在第 3.6 秒定格後浮現 */
+        body.started #status-text {
+            animation: fadeInText 0.5s ease 3.6s forwards;
+        }
+        @keyframes fadeInText { to { opacity: 1; } }
+
+        /* 🌟 核心修正 4：新增最一開始的 "Tap to Start." 覆蓋黑幕 */
+        #start-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #111111; /* 純黑神祕開場 */
+            display: flex; justify-content: center; align-items: center;
+            z-index: 9999; /* 僅次於魔術師按鈕 */
+            cursor: pointer;
+            transition: opacity 0.6s ease-in-out;
+        }
+        #start-prompt {
+            font-size: 32px; color: #f3c623; font-weight: bold; letter-spacing: 2px;
+            animation: textPulse 1.5s infinite alternate;
+        }
+
+        .pulse-hint { animation: textPulse 1.5s infinite alternate; }
+        @keyframes textPulse {
+            from { text-shadow: 0 2px 8px rgba(243, 198, 35, 0.3); transform: scale(0.98); }
+            to { text-shadow: 0 2px 25px rgba(243, 198, 35, 1); color: #fff; transform: scale(1.02); }
+        }
+
+        /* 畫架與畫布元件保持不變... */
+        #magic-stage-wrapper { position: relative; padding-bottom: 40px; }
+        #magic-stage-wrapper::before { content: ""; position: absolute; bottom: -120px; left: 50%; width: 14px; height: 160px; background: #73421A; transform: translateX(-50%); z-index: 1; border-radius: 4px; box-shadow: 5px 5px 15px rgba(0,0,0,0.5); }
+        #magic-stage { position: relative; width: 360px; height: 440px; background: #fafafa; border-radius: 6px; box-shadow: 0 30px 70px rgba(0,0,0,0.8), inset 0 0 30px rgba(0,0,0,0.02); border: 1px solid #e0e0e0; perspective: 1500px; z-index: 3; }
+        #magic-stage-wrapper::after { content: ""; position: absolute; bottom: 30px; left: -20px; width: 400px; height: 16px; background: #8C5323; border-radius: 4px; box-shadow: 0 8px 20px rgba(0,0,0,0.6); z-index: 4; border-bottom: 3px solid #592E0F; }
+
+        #paintCanvas { position: absolute; top: 0; left: 0; z-index: 20; background: transparent; cursor: crosshair; touch-action: none; }
+        #magic-stage-wrapper.ready-to-click { cursor: pointer; }
+        
+        #magic-card-3d { position: absolute; z-index: 15; transform-style: preserve-3d; display: none; transition: transform 1.5s cubic-bezier(0.2, 0.8, 0.2, 1); transform-origin: center center; }
+        .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; }
+        .card-back { z-index: 2; }
+        .card-front { z-index: 1; transform: rotateY(180deg); }
+        .clip-container { width: 100%; height: 100%; overflow: hidden; transform: scale(0.9); transform-origin: center center; background: #fafafa; border-radius: 10px; opacity: 0; transition: opacity 3.0s ease-in-out; }
+        .clip-container.reveal { opacity: 1; }
+        .frame-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; opacity: 0; transition: opacity 2.0s ease-in-out; }
+        .frame-canvas.show { opacity: 1; }
+        .card-img { width: 100%; height: 100%; object-fit: fill; mix-blend-mode: multiply; filter: contrast(1.05) brightness(1.0); }
+
+        /* 手機橫置（Landscape）響應式優化 */
+        @media (orientation: landscape) and (max-height: 550px) {
+            body.started {
+                background-size: 65%;
+                background-position: 12% center;
+            }
+            #magic-setup {
+                transform: scale(0.58);
+                transform-origin: center center;
+                margin-left: 160px;
+                margin-top: -10px;
+            }
+        }
+
+        /* 🧙‍♂️ 魔術師秘密基地：完全隱形按鈕與彈窗控制 */
+        #secret-trigger {
+            position: fixed;
+            bottom: 0; right: 0;
+            width: 80px; height: 80px;
+            background: transparent;
+            z-index: 10000; /* 最高層級，確保凌駕於 Tap to Start 黑幕之上 */
+            cursor: default;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #secret-modal {
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(25, 25, 25, 0.98);
+            border: 2px solid #f3c623; border-radius: 12px;
+            padding: 25px; z-index: 10001; /* 最頂層 */
+            display: none; color: white; font-family: sans-serif;
+            box-shadow: 0 0 40px rgba(0,0,0,1); text-align: center;
+        }
+        #secret-modal h3 { margin-top: 0; color: #f3c623; font-size: 18px; }
+        #secret-modal select, #secret-modal button {
+            padding: 10px; font-size: 16px; margin: 8px; border-radius: 6px; border: 1px solid #444; background: #333; color: white;
+        }
+        #secret-confirm { background: #f3c623 !important; color: black !important; font-weight: bold; cursor: pointer; width: 120px; }
+    </style>
+</head>
+<body>
+
+    <div id="start-overlay">
+        <div id="start-prompt">Tap to Start.</div>
+    </div>
+
+    <div id="magic-setup">
+        <h3 id="status-text"> 請在畫架上，一筆畫出一個撲克牌框...</h3>
+        <div id="magic-stage-wrapper">
+            <div id="magic-stage">
+                <canvas id="paintCanvas" width="360" height="440"></canvas>
+                <div id="magic-card-3d">
+                    <div class="card-face card-back"><div class="clip-container"><img class="card-img" src="./cards/bicycle_blue.png" alt="back"></div><canvas class="frame-canvas"></canvas></div>
+                    <div class="card-face card-front"><div class="clip-container"><img id="img-front" class="card-img" src="" alt="front"></div><canvas class="frame-canvas"></canvas></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="secret-trigger"></div>
+
+    <div id="secret-modal">
+        <h3>🧙‍♂️ 心靈控制：設定目標撲克牌</h3>
+        <div style="margin: 15px 0;">
+            <select id="secret-suit">
+                <option value="spade">黑桃 ♠</option>
+                <option value="heart">紅心 ♥</option>
+                <option value="club">梅花 ♣</option>
+                <option value="diamond">方塊 ♦</option>
+            </select>
+            <select id="secret-value">
+                <option value="1">A</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+                <option value="jack">J</option>
+                <option value="queen">Q</option>
+                <option value="king">K</option>
+            </select>
+        </div>
+        <button id="secret-confirm">悄悄灌錄魔法</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('paintCanvas');
+        const ctx = canvas.getContext('2d');
+        const statusText = document.getElementById('status-text');
+        const card3D = document.getElementById('magic-card-3d');
+        const imgFront = document.getElementById('img-front');
+        const stageWrapper = document.getElementById('magic-stage-wrapper');
+        
+        // 新增黑幕開場 DOM
+        const startOverlay = document.getElementById('start-overlay');
+
+        // 魔術師後台 DOM
+        const secretTrigger = document.getElementById('secret-trigger');
+        const secretModal = document.getElementById('secret-modal');
+        const secretConfirm = document.getElementById('secret-confirm');
+        const secretSuit = document.getElementById('secret-suit');
+        const secretValue = document.getElementById('secret-value');
+
+        let isDrawing = false;
+        let tracePoints = []; 
+        let magicState = 0; // 0=繪畫, 1=點擊修正, 2=等待翻牌, 3=動態保護
+
+        // 基本盤防穿幫隨機牌
+        const availableCards = ['spade_1', 'heart_10', 'club_jack', 'diamond_king'];
+        let finalCardName = availableCards[Math.floor(Math.random() * availableCards.length)];
+        imgFront.src = `./cards/${finalCardName}.png`;
+
+        ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+
+        // 🌟 核心修正 5：Tap to Start 點擊事件，點了之後才觸發所有 CSS 動畫
+        startOverlay.addEventListener('click', () => {
+            document.body.classList.add('started');
+            startOverlay.style.opacity = '0';
+            setTimeout(() => {
+                startOverlay.style.display = 'none';
+            }, 600); // 動畫淡出後徹底隱藏黑幕
+        });
+
+        // 🌟 🧙‍♂️ 魔術師隨時長按後台控制邏輯 (優先級最高)
+        let pressTimer;
+        
+        secretTrigger.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            e.stopPropagation(); // 防止長按觸發 start-overlay 的點擊
+            pressTimer = window.setTimeout(() => {
+                secretModal.style.display = 'block'; 
+            }, 1000);
+        });
+
+        secretTrigger.addEventListener('pointerup', (e) => { e.stopPropagation(); clearTimeout(pressTimer); });
+        secretTrigger.addEventListener('pointerleave', (e) => { e.stopPropagation(); clearTimeout(pressTimer); });
+
+        // 秘密換牌儲存
+        secretConfirm.addEventListener('click', (e) => {
+            e.stopPropagation();
+            finalCardName = `${secretSuit.value}_${secretValue.value}`;
+            imgFront.src = `./cards/${finalCardName}.png`; 
+            secretModal.style.display = 'none';
+        });
+
+        // 🌟 全設備通用指針繪畫引擎
+        canvas.addEventListener('pointerdown', (e) => { 
+            if(magicState !== 0) return;
+            isDrawing = true; tracePoints = []; 
+            ctx.clearRect(0, 0, canvas.width, canvas.height); 
+            e.preventDefault(); 
+        });
+
+        canvas.addEventListener('pointermove', draw);
+
+        function draw(e) {
+            if (!isDrawing || magicState !== 0) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            tracePoints.push({x, y});
+            ctx.lineTo(x, y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y);
+            e.preventDefault();
+        }
+
+        window.addEventListener('pointerup', () => { 
+            if (!isDrawing) return;
+            isDrawing = false; 
+            if (tracePoints.length > 10) {
+                magicState = 1;
+                statusText.innerText = "👉 畫得很好！現在請點擊畫布...";
+                statusText.classList.add('pulse-hint');
+                stageWrapper.classList.add('ready-to-click');
+            }
+        });
+
+        function getSortedCorners(pts) {
+            let tl = pts[0], tr = pts[0], br = pts[0], bl = pts[0];
+            let minSum = Infinity, maxSum = -Infinity, minDiff = Infinity, maxDiff = -Infinity;
+            pts.forEach(p => {
+                let sum = p.x + p.y, diff = p.x - p.y;
+                if (sum < minSum) { minSum = sum; tl = p; }   
+                if (sum > maxSum) { maxSum = sum; br = p; }   
+                if (diff > maxDiff) { maxDiff = diff; tr = p; } 
+                if (diff < minDiff) { minDiff = diff; bl = p; } 
+            });
+            return [tl, tr, br, bl];
+        }
+
+        // 🔮 點擊互動與魔法顯影流程
+        stageWrapper.addEventListener('click', (e) => {
+            e.stopPropagation();
+
+            if (magicState === 1) {
+                magicState = 3; 
+                statusText.classList.remove('pulse-hint');
+                stageWrapper.classList.remove('ready-to-click'); 
+                statusText.innerText = "正在顯現撲克牌...";
+
+                const corners = getSortedCorners(tracePoints);
+                let xs = corners.map(p => p.x); let ys = corners.map(p => p.y);
+                let minX = Math.min(...xs), maxX = Math.max(...xs);
+                let minY = Math.min(...ys), maxY = Math.max(...ys);
+                let boxWidth = maxX - minX; let boxHeight = maxY - minY;
+                card3D.style.width = `${boxWidth}px`; card3D.style.height = `${boxHeight}px`;
+                card3D.style.left = `${minX}px`; card3D.style.top = `${minY}px`;
+                
+                let pct0_x = ((corners[0].x - minX) / boxWidth) * 100; let pct0_y = ((corners[0].y - minY) / boxHeight) * 100;
+                let pct1_x = ((corners[1].x - minX) / boxWidth) * 100; let pct1_y = ((corners[1].y - minY) / boxHeight) * 100;
+                let pct2_x = ((corners[2].x - minX) / boxWidth) * 100; let pct2_y = ((corners[2].y - minY) / boxHeight) * 100;
+                let pct3_x = ((corners[3].x - minX) / boxWidth) * 100; let pct3_y = ((corners[3].y - minY) / boxHeight) * 100;
+                const clipPathString = `polygon(${pct0_x}% ${pct0_y}%, ${pct1_x}% ${pct1_y}%, ${pct2_x}% ${pct2_y}%, ${pct3_x}% ${pct3_y}%)`;
+                
+                const clipContainers = card3D.querySelectorAll('.clip-container');
+                clipContainers.forEach(container => { container.style.clipPath = clipPathString; });
+                
+                const frameCanvases = card3D.querySelectorAll('.frame-canvas');
+                frameCanvases.forEach(fCanvas => {
+                    fCanvas.width = boxWidth; fCanvas.height = boxHeight;
+                    const fCtx = fCanvas.getContext('2d');
+                    fCtx.strokeStyle = '#1a1a1a'; fCtx.lineWidth = 4; fCtx.lineCap = 'round'; fCtx.lineJoin = 'round';
+                    fCtx.beginPath();
+                    fCtx.moveTo(corners[0].x - minX, corners[0].y - minY);
+                    fCtx.lineTo(corners[1].x - minX, corners[1].y - minY);
+                    fCtx.lineTo(corners[2].x - minX, corners[2].y - minY);
+                    fCtx.lineTo(corners[3].x - minX, corners[3].y - minY);
+                    fCtx.closePath(); fCtx.stroke();
+                });
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                card3D.style.display = 'block';
+                frameCanvases.forEach(fCanvas => fCanvas.classList.add('show'));
+
+                setTimeout(() => {
+                    statusText.innerText = "撲克牌顯示中...";
+                    clipContainers.forEach(container => container.classList.add('reveal'));
+                }, 300);
+
+                setTimeout(() => {
+                    magicState = 2;
+                    statusText.innerText = "請點擊撲克牌，將它翻面...";
+                    statusText.classList.add('pulse-hint');
+                    stageWrapper.classList.add('ready-to-click'); 
+                }, 3500);
+            }
+            else if (magicState === 2) {
+                magicState = 3; 
+                statusText.classList.remove('pulse-hint');
+                stageWrapper.classList.remove('ready-to-click');
+                statusText.innerText = "你的牌是...";
+                card3D.style.transform = `rotateY(180deg)`;
+            }
+        });
+    </script>
+</body>
+</html>
