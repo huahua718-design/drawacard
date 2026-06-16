@@ -3,111 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Cardtoon - 劇場全螢幕魔術舞台 (完美左入版)</title>
+    <title>Cardtoon - 直立手機魔術專用舞台</title>
     <style>
         body { 
             margin: 0; 
             background-image: url('./image_6.png'); 
+            background-size: 80%;
             background-repeat: no-repeat;
             background-attachment: fixed;
             background-color: rgba(0, 0, 0, 0.35); 
             background-blend-mode: multiply;
-            
-            /* 舞台基礎配置 */
-            width: 100vw; height: 100vh;
-            position: relative; 
-            overflow: hidden; 
-
-            font-family: sans-serif; color: #fff;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            min-height: 100vh; font-family: sans-serif; color: #fff;
             user-select: none;
             overscroll-behavior: none;
-            
-            /* 🌟 核心修正：使用 vw (視區寬度) 強制定位在螢幕絕對左側之外 */
-            background-position: -250vw center; 
+            background-position: -50% center; 
         }
 
-        /* ------------------------------------------ */
-        /* --- 🌟 📱 直立手機 (Portrait Mobile) 劇場動態核心 🌟 --- */
+        /* 🎬 預設橫置/電腦版動畫 */
+        body.started {
+            animation: stickmanEnter 3.0s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+        @keyframes stickmanEnter {
+            from { background-position: -50% center; }
+            to { background-position: 25% center; }
+        }
+        
+        #magic-setup { 
+            display: flex; flex-direction: column; align-items: center; 
+            margin-left: 180px; 
+            opacity: 0; 
+        }
+        body.started #magic-setup {
+            animation: easelUp 2.4s cubic-bezier(0.175, 0.885, 0.32, 1.1) 1.2s forwards;
+        }
+        @keyframes easelUp {
+            from { transform: translateY(100vh); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        #status-text { 
+            text-align: center; margin: 0 0 30px 0; color: #f3c623; font-size: 20px; font-weight: bold;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.9); width: 500px; line-height: 1.5;
+            opacity: 0;
+        }
+        body.started #status-text {
+            animation: fadeInText 0.5s ease 3.6s forwards;
+        }
+        @keyframes fadeInText { to { opacity: 1; } }
+
+        /* 🌟 修正 1：📱 直立手機螢幕 (Portrait Mobile) 完美版面配置 */
         @media (max-width: 500px) and (orientation: portrait) {
             body {
-                background-size: auto 100%;
+                background-size: 110%; /* 讓火柴人在手機上顯得更清晰 */
             }
             body.started {
-                animation: stickmanEnterMobileFull 3.0s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+                /* 啟動手機專用背景滑入：讓火柴人靠螢幕左邊 */
+                animation: stickmanEnterMobile 3.0s cubic-bezier(0.25, 1, 0.5, 1) forwards;
             }
-            @keyframes stickmanEnterMobileFull {
-                /* ✅ 強制從絕對左側 (-250vw) 開始，向右滑動到定位點 */
-                from { background-position: -250vw center; } 
-                to { background-position: -10% center; } 
-            }
-            
-            #magic-setup { 
-                position: absolute;
-                top: 50%; left: 50%;
-                transform: translate(-50%, -50%);
-                display: flex; flex-direction: column; align-items: center; 
-                opacity: 0; 
-                width: 100%;
-                max-width: 95vw; 
-                margin-left: 0; 
-            }
-
-            body.started #magic-setup {
-                animation: easelUpFullMobile 2.4s cubic-bezier(0.175, 0.885, 0.32, 1.05) 1.5s forwards;
-            }
-            @keyframes easelUpFullMobile {
-                from { 
-                    transform: translate(-50%, calc(-50% + 100vh)) scale(0.6); 
-                    opacity: 0; 
-                }
-                to { 
-                    transform: translate(-50%, -50%) scale(1.0); 
-                    opacity: 1; 
-                }
-            }
-
-            #status-text { 
-                text-align: center; margin: 0 0 20px 0; color: #f3c623; 
-                font-size: 22px; font-weight: bold; width: 300px;
-                text-shadow: 0 2px 10px rgba(0,0,0,1); line-height: 1.3;
-                opacity: 0;
-            }
-            body.started #status-text {
-                animation: fadeInText 0.5s ease 3.9s forwards;
-            }
-            @keyframes fadeInText { to { opacity: 1; } }
-
-            #magic-stage { 
-                width: 360px; height: 440px; 
-                max-width: 100%;
-                max-height: 60vh; 
-            }
-            #magic-stage-wrapper::after { width: calc(100% + 40px); left: -20px;}
-        }
-
-        /* --- 💻 電腦版 / 橫螢幕 (Landscape) 開場設定 --- */
-        @media (min-width: 501px), (orientation: landscape) {
-            body { background-size: contain; background-position: -150vw center;}
-            body.started { animation: stickmanEnterDesktop 3.0s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
-            @keyframes stickmanEnterDesktop {
-                from { background-position: -150vw center; }
-                to { background-position: 25% center; }
+            @keyframes stickmanEnterMobile {
+                from { background-position: -150% center; }
+                to { background-position: -25% center; } /* 完美的左側邊緣靠攏 */
             }
             #magic-setup {
-                position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-                display: flex; flex-direction: column; align-items: center; 
-                margin-left: 180px; opacity: 0;
+                margin-left: 0;
+                position: absolute;
+                right: 8px; /* 🧲 強力吸附在螢幕右側 */
+                transform: scale(0.52); /* 🔍 縮小畫架，確保窄螢幕不跑版 */
+                transform-origin: right center;
             }
-            body.started #magic-setup { animation: easelUpDesktop 2.4s cubic-bezier(0.175, 0.885, 0.32, 1.05) 1.5s forwards; }
-            @keyframes easelUpDesktop {
-                from { transform: translate(-50%, calc(-50% + 100vh)) scale(0.6); opacity: 0; }
-                to { transform: translate(-50%, -50%) scale(1.0); opacity: 1; }
+            #status-text {
+                width: 320px; /* 手機版文字換行優化 */
+                font-size: 26px; /* 稍微放大，方便魔術師斜眼偷看 */
+                margin-bottom: 15px;
             }
-            #status-text { width: 400px; font-size: 20px; }
         }
 
-        /* ------------------------------------------ */
-        
+        /* 開幕黑幕 */
         #start-overlay {
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
@@ -124,12 +96,13 @@
             to { text-shadow: 0 2px 25px rgba(243, 198, 35, 1); color: #fff; transform: scale(1.02); }
         }
 
-        #magic-stage-wrapper { position: relative; padding-bottom: 40px; width: 100%; display: flex; justify-content: center; }
+        /* 畫架結構元件 */
+        #magic-stage-wrapper { position: relative; padding-bottom: 40px; }
         #magic-stage-wrapper::before { content: ""; position: absolute; bottom: -120px; left: 50%; width: 14px; height: 160px; background: #73421A; transform: translateX(-50%); z-index: 1; border-radius: 4px; box-shadow: 5px 5px 15px rgba(0,0,0,0.5); }
-        #magic-stage { position: relative; background: #fafafa; border-radius: 6px; box-shadow: 0 30px 70px rgba(0,0,0,0.9), inset 0 0 30px rgba(0,0,0,0.02); border: 1px solid #e0e0e0; perspective: 1500px; z-index: 3; width: 360px; height: 440px;}
-        #magic-stage-wrapper::after { content: ""; position: absolute; bottom: 30px; background: #8C5323; border-radius: 4px; box-shadow: 0 8px 20px rgba(0,0,0,0.6); z-index: 4; border-bottom: 3px solid #592E0F; height: 16px; }
+        #magic-stage { position: relative; width: 360px; height: 440px; background: #fafafa; border-radius: 6px; box-shadow: 0 30px 70px rgba(0,0,0,0.8), inset 0 0 30px rgba(0,0,0,0.02); border: 1px solid #e0e0e0; perspective: 1500px; z-index: 3; }
+        #magic-stage-wrapper::after { content: ""; position: absolute; bottom: 30px; left: -20px; width: 400px; height: 16px; background: #8C5323; border-radius: 4px; box-shadow: 0 8px 20px rgba(0,0,0,0.6); z-index: 4; border-bottom: 3px solid #592E0F; }
 
-        #paintCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 20; background: transparent; cursor: crosshair; touch-action: none; border-radius: 6px; }
+        #paintCanvas { position: absolute; top: 0; left: 0; z-index: 20; background: transparent; cursor: crosshair; touch-action: none; }
         #magic-stage-wrapper.ready-to-click { cursor: pointer; }
         
         #magic-card-3d { position: absolute; z-index: 15; transform-style: preserve-3d; display: none; transition: transform 1.5s cubic-bezier(0.2, 0.8, 0.2, 1); transform-origin: center center; }
@@ -142,10 +115,11 @@
         .frame-canvas.show { opacity: 1; }
         .card-img { width: 100%; height: 100%; object-fit: fill; mix-blend-mode: multiply; filter: contrast(1.05) brightness(1.0); }
 
+        /* 🧙‍♂️ 魔術師秘密基地元件 */
         #secret-trigger {
             position: fixed;
             bottom: 0; right: 0;
-            width: 100px; height: 100px;
+            width: 90px; height: 90px; /* 稍微放大，方便盲按雙擊 */
             background: transparent;
             z-index: 10000; 
             cursor: default;
@@ -176,7 +150,7 @@
     </div>
 
     <div id="magic-setup">
-        <h3 id="status-text">✏️ 請在畫架上畫出一個撲克牌框...</h3>
+        <h3 id="status-text">✏️ 請用鉛筆在木畫架上，一筆畫出一個撲克牌框...</h3>
         <div id="magic-stage-wrapper">
             <div id="magic-stage">
                 <canvas id="paintCanvas" width="360" height="440"></canvas>
@@ -243,24 +217,31 @@
 
         ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
 
+        // 點擊 Tap to Start 開場
         startOverlay.addEventListener('click', () => {
             document.body.classList.add('started');
             startOverlay.style.opacity = '0';
             setTimeout(() => { startOverlay.style.display = 'none'; }, 600);
         });
 
+        // 🌟 核心修正 2：🧙‍♂️ 魔術師專用「極速雙擊(Double Tap)」觸發算法
         let lastTapTime = 0;
+        
         secretTrigger.addEventListener('pointerdown', (e) => {
             e.preventDefault();
-            e.stopPropagation();
+            e.stopPropagation(); // 徹底切斷，防止黑幕接收到點擊
+            
             const currentTime = Date.now();
             const tapLength = currentTime - lastTapTime;
+            
+            // 如果兩次點擊時間差在 300 毫秒以內，判定為魔術師雙擊
             if (tapLength < 300 && tapLength > 0) {
                 secretModal.style.display = 'block';
             }
             lastTapTime = currentTime;
         });
 
+        // 儲存換牌設定
         secretConfirm.addEventListener('click', (e) => {
             e.stopPropagation();
             finalCardName = `${secretSuit.value}_${secretValue.value}`;
@@ -268,6 +249,7 @@
             secretModal.style.display = 'none';
         });
 
+        // 🎨 全設備通用繪畫引擎
         canvas.addEventListener('pointerdown', (e) => { 
             if(magicState !== 0) return;
             isDrawing = true; tracePoints = []; 
@@ -280,12 +262,8 @@
         function draw(e) {
             if (!isDrawing || magicState !== 0) return;
             const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
-            
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
             tracePoints.push({x, y});
             ctx.lineTo(x, y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y);
             e.preventDefault();
@@ -296,7 +274,7 @@
             isDrawing = false; 
             if (tracePoints.length > 10) {
                 magicState = 1;
-                statusText.innerText = "👉 畫得很好！現在請點擊畫布施展魔法...";
+                statusText.innerText = "👉 畫得很好！現在請用手指「點擊畫布施展魔法」...";
                 statusText.classList.add('pulse-hint');
                 stageWrapper.classList.add('ready-to-click');
             }
@@ -315,6 +293,7 @@
             return [tl, tr, br, bl];
         }
 
+        // 🔮 點擊互動與魔法變形
         stageWrapper.addEventListener('click', (e) => {
             e.stopPropagation();
 
@@ -324,24 +303,18 @@
                 stageWrapper.classList.remove('ready-to-click'); 
                 statusText.innerText = "⏳ 正在將粒子修正為直線...";
 
-                const logicW = canvas.width;
-                const logicH = canvas.height;
                 const corners = getSortedCorners(tracePoints);
-                
                 let xs = corners.map(p => p.x); let ys = corners.map(p => p.y);
                 let minX = Math.min(...xs), maxX = Math.max(...xs);
                 let minY = Math.min(...ys), maxY = Math.max(...ys);
+                let boxWidth = maxX - minX; let boxHeight = maxY - minY;
+                card3D.style.width = `${boxWidth}px`; card3D.style.height = `${boxHeight}px`;
+                card3D.style.left = `${minX}px`; card3D.style.top = `${minY}px`;
                 
-                card3D.style.width = `${logicW}px`; 
-                card3D.style.height = `${logicH}px`;
-                card3D.style.left = `0px`; 
-                card3D.style.top = `0px`;
-
-                let pct0_x = (corners[0].x / logicW) * 100; let pct0_y = (corners[0].y / logicH) * 100;
-                let pct1_x = (corners[1].x / logicW) * 100; let pct1_y = (corners[1].y / logicH) * 100;
-                let pct2_x = (corners[2].x / logicW) * 100; let pct2_y = (corners[2].y / logicH) * 100;
-                let pct3_x = (corners[3].x / logicW) * 100; let pct3_y = (corners[3].y / logicH) * 100;
-                
+                let pct0_x = ((corners[0].x - minX) / boxWidth) * 100; let pct0_y = ((corners[0].y - minY) / boxHeight) * 100;
+                let pct1_x = ((corners[1].x - minX) / boxWidth) * 100; let pct1_y = ((corners[1].y - minY) / boxHeight) * 100;
+                let pct2_x = ((corners[2].x - minX) / boxWidth) * 100; let pct2_y = ((corners[2].y - minY) / boxHeight) * 100;
+                let pct3_x = ((corners[3].x - minX) / boxWidth) * 100; let pct3_y = ((corners[3].y - minY) / boxHeight) * 100;
                 const clipPathString = `polygon(${pct0_x}% ${pct0_y}%, ${pct1_x}% ${pct1_y}%, ${pct2_x}% ${pct2_y}%, ${pct3_x}% ${pct3_y}%)`;
                 
                 const clipContainers = card3D.querySelectorAll('.clip-container');
@@ -349,14 +322,14 @@
                 
                 const frameCanvases = card3D.querySelectorAll('.frame-canvas');
                 frameCanvases.forEach(fCanvas => {
-                    fCanvas.width = logicW; fCanvas.height = logicH;
+                    fCanvas.width = boxWidth; fCanvas.height = boxHeight;
                     const fCtx = fCanvas.getContext('2d');
                     fCtx.strokeStyle = '#1a1a1a'; fCtx.lineWidth = 4; fCtx.lineCap = 'round'; fCtx.lineJoin = 'round';
                     fCtx.beginPath();
-                    fCtx.moveTo(corners[0].x, corners[0].y);
-                    fCtx.lineTo(corners[1].x, corners[1].y);
-                    fCtx.lineTo(corners[2].x, corners[2].y);
-                    fCtx.lineTo(corners[3].x, corners[3].y);
+                    fCtx.moveTo(corners[0].x - minX, corners[0].y - minY);
+                    fCtx.lineTo(corners[1].x - minX, corners[1].y - minY);
+                    fCtx.lineTo(corners[2].x - minX, corners[2].y - minY);
+                    fCtx.lineTo(corners[3].x - minX, corners[3].y - minY);
                     fCtx.closePath(); fCtx.stroke();
                 });
 
@@ -371,7 +344,7 @@
 
                 setTimeout(() => {
                     magicState = 2;
-                    statusText.innerText = "🃏 奇蹟誕生！點擊撲克牌將它翻面...";
+                    statusText.innerText = "🃏 奇蹟誕生！用手指「點擊撲克牌」將它翻面...";
                     statusText.classList.add('pulse-hint');
                     stageWrapper.classList.add('ready-to-click'); 
                 }, 3500);
