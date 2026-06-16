@@ -293,7 +293,7 @@
             return [tl, tr, br, bl];
         }
 
-        // 🔮 點擊互動與魔法變形
+        // 🔮 點擊互動與魔法變形 (保留原手繪圖騰)
         stageWrapper.addEventListener('click', (e) => {
             e.stopPropagation();
 
@@ -301,15 +301,25 @@
                 magicState = 3; 
                 statusText.classList.remove('pulse-hint');
                 stageWrapper.classList.remove('ready-to-click'); 
-                statusText.innerText = "⏳ 正在將粒子修正為直線...";
+                statusText.innerText = "⏳ 魔法正在注入你的手繪圖騰...";
 
                 const corners = getSortedCorners(tracePoints);
-                let xs = corners.map(p => p.x); let ys = corners.map(p => p.y);
-                let minX = Math.min(...xs), maxX = Math.max(...xs);
-                let minY = Math.min(...ys), maxY = Math.max(...ys);
-                let boxWidth = maxX - minX; let boxHeight = maxY - minY;
-                card3D.style.width = `${boxWidth}px`; card3D.style.height = `${boxHeight}px`;
-                card3D.style.left = `${minX}px`; card3D.style.top = `${minY}px`;
+                
+                // 使用「所有」筆跡點來計算真實邊界，並加入 5px 緩衝
+                let allXs = tracePoints.map(p => p.x); 
+                let allYs = tracePoints.map(p => p.y);
+                let minX = Math.min(...allXs) - 5; 
+                let maxX = Math.max(...allXs) + 5;
+                let minY = Math.min(...allYs) - 5; 
+                let maxY = Math.max(...allYs) + 5;
+                
+                let boxWidth = maxX - minX; 
+                let boxHeight = maxY - minY;
+                
+                card3D.style.width = `${boxWidth}px`; 
+                card3D.style.height = `${boxHeight}px`;
+                card3D.style.left = `${minX}px`; 
+                card3D.style.top = `${minY}px`;
                 
                 let pct0_x = ((corners[0].x - minX) / boxWidth) * 100; let pct0_y = ((corners[0].y - minY) / boxHeight) * 100;
                 let pct1_x = ((corners[1].x - minX) / boxWidth) * 100; let pct1_y = ((corners[1].y - minY) / boxHeight) * 100;
@@ -324,15 +334,12 @@
                 frameCanvases.forEach(fCanvas => {
                     fCanvas.width = boxWidth; fCanvas.height = boxHeight;
                     const fCtx = fCanvas.getContext('2d');
-                    fCtx.strokeStyle = '#1a1a1a'; fCtx.lineWidth = 4; fCtx.lineCap = 'round'; fCtx.lineJoin = 'round';
-                    fCtx.beginPath();
-                    fCtx.moveTo(corners[0].x - minX, corners[0].y - minY);
-                    fCtx.lineTo(corners[1].x - minX, corners[1].y - minY);
-                    fCtx.lineTo(corners[2].x - minX, corners[2].y - minY);
-                    fCtx.lineTo(corners[3].x - minX, corners[3].y - minY);
-                    fCtx.closePath(); fCtx.stroke();
+                    
+                    // 💡 直接將主畫布上的原始筆跡，原封不動「拷貝」到撲克牌上
+                    fCtx.drawImage(canvas, minX, minY, boxWidth, boxHeight, 0, 0, boxWidth, boxHeight);
                 });
 
+                // 清除主畫布，準備展示 3D 卡牌
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 card3D.style.display = 'block';
                 frameCanvases.forEach(fCanvas => fCanvas.classList.add('show'));
