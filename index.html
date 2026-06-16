@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Cardtoon - 直立手機魔術專用舞台</title>
     <style>
         body { 
@@ -17,6 +17,7 @@
             min-height: 100vh; font-family: sans-serif; color: #fff;
             user-select: none;
             overscroll-behavior: none;
+            touch-action: none; /* 🔒 修正 2：徹底禁用原生的雙擊放大與滑動手勢 */
             background-position: -50% center; 
         }
 
@@ -52,29 +53,28 @@
         }
         @keyframes fadeInText { to { opacity: 1; } }
 
-        /* 🌟 修正 1：📱 直立手機螢幕 (Portrait Mobile) 完美版面配置 */
+        /* 📱 直立手機螢幕 (Portrait Mobile) 完美版面配置 */
         @media (max-width: 500px) and (orientation: portrait) {
             body {
-                background-size: 110%; /* 讓火柴人在手機上顯得更清晰 */
+                background-size: 110%;
             }
             body.started {
-                /* 啟動手機專用背景滑入：讓火柴人靠螢幕左邊 */
                 animation: stickmanEnterMobile 3.0s cubic-bezier(0.25, 1, 0.5, 1) forwards;
             }
             @keyframes stickmanEnterMobile {
                 from { background-position: -150% center; }
-                to { background-position: -25% center; } /* 完美的左側邊緣靠攏 */
+                to { background-position: -25% center; }
             }
             #magic-setup {
                 margin-left: 0;
                 position: absolute;
-                right: 8px; /* 🧲 強力吸附在螢幕右側 */
-                transform: scale(0.52); /* 🔍 縮小畫架，確保窄螢幕不跑版 */
+                right: 8px;
+                transform: scale(0.52);
                 transform-origin: right center;
             }
             #status-text {
-                width: 320px; /* 手機版文字換行優化 */
-                font-size: 26px; /* 稍微放大，方便魔術師斜眼偷看 */
+                width: 320px;
+                font-size: 26px;
                 margin-bottom: 15px;
             }
         }
@@ -113,13 +113,22 @@
         .clip-container.reveal { opacity: 1; }
         .frame-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; opacity: 0; transition: opacity 2.0s ease-in-out; }
         .frame-canvas.show { opacity: 1; }
-        .card-img { width: 100%; height: 100%; object-fit: fill; mix-blend-mode: multiply; filter: contrast(1.05) brightness(1.0); }
+        
+        .card-img { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: fill; 
+            mix-blend-mode: multiply; 
+            filter: contrast(1.05) brightness(1.0); 
+            transform: scale(0.9);
+            transform-origin: center center;
+        }
 
         /* 🧙‍♂️ 魔術師秘密基地元件 */
         #secret-trigger {
             position: fixed;
             bottom: 0; right: 0;
-            width: 90px; height: 90px; /* 稍微放大，方便盲按雙擊 */
+            width: 90px; height: 90px;
             background: transparent;
             z-index: 10000; 
             cursor: default;
@@ -217,31 +226,28 @@
 
         ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
 
-        // 點擊 Tap to Start 開場
-        startOverlay.addEventListener('click', () => {
+        // 🐞 修正 3：將 'click' 改成 'pointerdown'，避免在手機上被阻擋
+        startOverlay.addEventListener('pointerdown', () => {
             document.body.classList.add('started');
             startOverlay.style.opacity = '0';
             setTimeout(() => { startOverlay.style.display = 'none'; }, 600);
         });
 
-        // 🌟 核心修正 2：🧙‍♂️ 魔術師專用「極速雙擊(Double Tap)」觸發算法
         let lastTapTime = 0;
         
         secretTrigger.addEventListener('pointerdown', (e) => {
             e.preventDefault();
-            e.stopPropagation(); // 徹底切斷，防止黑幕接收到點擊
+            e.stopPropagation();
             
             const currentTime = Date.now();
             const tapLength = currentTime - lastTapTime;
             
-            // 如果兩次點擊時間差在 300 毫秒以內，判定為魔術師雙擊
             if (tapLength < 300 && tapLength > 0) {
                 secretModal.style.display = 'block';
             }
             lastTapTime = currentTime;
         });
 
-        // 儲存換牌設定
         secretConfirm.addEventListener('click', (e) => {
             e.stopPropagation();
             finalCardName = `${secretSuit.value}_${secretValue.value}`;
@@ -249,7 +255,6 @@
             secretModal.style.display = 'none';
         });
 
-        // 🎨 全設備通用繪畫引擎
         canvas.addEventListener('pointerdown', (e) => { 
             if(magicState !== 0) return;
             isDrawing = true; tracePoints = []; 
@@ -293,7 +298,6 @@
             return [tl, tr, br, bl];
         }
 
-        // 🔮 點擊互動與魔法變形 (保留原手繪圖騰)
         stageWrapper.addEventListener('click', (e) => {
             e.stopPropagation();
 
@@ -305,7 +309,6 @@
 
                 const corners = getSortedCorners(tracePoints);
                 
-                // 使用「所有」筆跡點來計算真實邊界，並加入 5px 緩衝
                 let allXs = tracePoints.map(p => p.x); 
                 let allYs = tracePoints.map(p => p.y);
                 let minX = Math.min(...allXs) - 5; 
@@ -334,12 +337,9 @@
                 frameCanvases.forEach(fCanvas => {
                     fCanvas.width = boxWidth; fCanvas.height = boxHeight;
                     const fCtx = fCanvas.getContext('2d');
-                    
-                    // 💡 直接將主畫布上的原始筆跡，原封不動「拷貝」到撲克牌上
                     fCtx.drawImage(canvas, minX, minY, boxWidth, boxHeight, 0, 0, boxWidth, boxHeight);
                 });
 
-                // 清除主畫布，準備展示 3D 卡牌
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 card3D.style.display = 'block';
                 frameCanvases.forEach(fCanvas => fCanvas.classList.add('show'));
