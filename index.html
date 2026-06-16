@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Cardtoon - 劇場全螢幕魔術舞台 (修復版)</title>
+    <title>Cardtoon - 劇場全螢幕魔術舞台 (完美左入版)</title>
     <style>
         body { 
             margin: 0; 
@@ -15,59 +15,52 @@
             
             /* 舞台基礎配置 */
             width: 100vw; height: 100vh;
-            position: relative; /* 鎖定 Body 坐標系統，供內部絕對定位使用 */
-            overflow: hidden; /* 動畫期間防止觀眾捲動 */
+            position: relative; 
+            overflow: hidden; 
 
             font-family: sans-serif; color: #fff;
             user-select: none;
             overscroll-behavior: none;
             
-            /* 初始位置在極左側之外 (updated for safer start) */
-            background-position: -200% center; 
+            /* 🌟 核心修正：使用 vw (視區寬度) 強制定位在螢幕絕對左側之外 */
+            background-position: -250vw center; 
         }
 
         /* ------------------------------------------ */
         /* --- 🌟 📱 直立手機 (Portrait Mobile) 劇場動態核心 🌟 --- */
         @media (max-width: 500px) and (orientation: portrait) {
             body {
-                /* 1. 🔍 修正：高度填滿，確保寬度自動縮放， preserve visibility of right easel */
                 background-size: auto 100%;
             }
             body.started {
-                /* 劇場背景滑入動畫启动 */
                 animation: stickmanEnterMobileFull 3.0s cubic-bezier(0.25, 1, 0.5, 1) forwards;
             }
             @keyframes stickmanEnterMobileFull {
-                from { background-position: -200% center; } /* 由極左滑入 */
-                /* 2. ✅ 修正：停靠位置優化。火柴人靠左，並露出背景圖右側的裝飾畫架 */
+                /* ✅ 強制從絕對左側 (-250vw) 開始，向右滑動到定位點 */
+                from { background-position: -250vw center; } 
                 to { background-position: -10% center; } 
             }
             
-            /* 畫架與引導台詞的獨立容器 */
             #magic-setup { 
-                /* 3. ✅ 核心修正：改用絕對定位在螢幕中央。不參與 Body Flexbox 佈局，防止背景瞬间跳動 */
                 position: absolute;
                 top: 50%; left: 50%;
-                transform: translate(-50%, -50%); /* 絕對居中 */
+                transform: translate(-50%, -50%);
                 display: flex; flex-direction: column; align-items: center; 
                 opacity: 0; 
                 width: 100%;
-                max-width: 95vw; /* 覆蓋大部螢幕，超好畫 */
-                margin-left: 0; /* 移除 flex  margins */
+                max-width: 95vw; 
+                margin-left: 0; 
             }
 
-            /* 🎬 啟動後：互動大畫架由下往上冒出來並覆蓋畫面 */
             body.started #magic-setup {
                 animation: easelUpFullMobile 2.4s cubic-bezier(0.175, 0.885, 0.32, 1.05) 1.5s forwards;
             }
             @keyframes easelUpFullMobile {
                 from { 
-                    /* 幾何縮小，從螢幕下方視界之外開始 */
                     transform: translate(-50%, calc(-50% + 100vh)) scale(0.6); 
                     opacity: 0; 
                 }
                 to { 
-                    /* 幾何回歸正常，覆蓋螢幕中央作畫區域 */
                     transform: translate(-50%, -50%) scale(1.0); 
                     opacity: 1; 
                 }
@@ -84,21 +77,20 @@
             }
             @keyframes fadeInText { to { opacity: 1; } }
 
-            /* 畫架木質組件配合全螢幕調整 */
             #magic-stage { 
                 width: 360px; height: 440px; 
                 max-width: 100%;
-                max-height: 60vh; /* 確保在細長手機上能完整顯示 */
+                max-height: 60vh; 
             }
             #magic-stage-wrapper::after { width: calc(100% + 40px); left: -20px;}
         }
 
-        /* --- 💻 電腦版 / 橫螢幕 (Landscape) 開場設定 (保持原樣，不影響修正) --- */
+        /* --- 💻 電腦版 / 橫螢幕 (Landscape) 開場設定 --- */
         @media (min-width: 501px), (orientation: landscape) {
-            body { background-size: contain; background-position: -150% center;}
+            body { background-size: contain; background-position: -150vw center;}
             body.started { animation: stickmanEnterDesktop 3.0s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
             @keyframes stickmanEnterDesktop {
-                from { background-position: -150% center; }
+                from { background-position: -150vw center; }
                 to { background-position: 25% center; }
             }
             #magic-setup {
@@ -115,9 +107,7 @@
         }
 
         /* ------------------------------------------ */
-        /* 以下保持之前開發的功能，包含黑幕與魔術師按鈕 */
         
-        /* Tap to Start 黑幕 */
         #start-overlay {
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
@@ -134,7 +124,6 @@
             to { text-shadow: 0 2px 25px rgba(243, 198, 35, 1); color: #fff; transform: scale(1.02); }
         }
 
-        /* 畫架與畫布元件 */
         #magic-stage-wrapper { position: relative; padding-bottom: 40px; width: 100%; display: flex; justify-content: center; }
         #magic-stage-wrapper::before { content: ""; position: absolute; bottom: -120px; left: 50%; width: 14px; height: 160px; background: #73421A; transform: translateX(-50%); z-index: 1; border-radius: 4px; box-shadow: 5px 5px 15px rgba(0,0,0,0.5); }
         #magic-stage { position: relative; background: #fafafa; border-radius: 6px; box-shadow: 0 30px 70px rgba(0,0,0,0.9), inset 0 0 30px rgba(0,0,0,0.02); border: 1px solid #e0e0e0; perspective: 1500px; z-index: 3; width: 360px; height: 440px;}
@@ -153,7 +142,6 @@
         .frame-canvas.show { opacity: 1; }
         .card-img { width: 100%; height: 100%; object-fit: fill; mix-blend-mode: multiply; filter: contrast(1.05) brightness(1.0); }
 
-        /* 🧙‍♂️ 魔術師雙擊秘密按鈕（右下角） */
         #secret-trigger {
             position: fixed;
             bottom: 0; right: 0;
@@ -249,21 +237,18 @@
         let tracePoints = []; 
         let magicState = 0; 
 
-        // 預設隨機牌
         const availableCards = ['spade_1', 'heart_10', 'club_jack', 'diamond_king'];
         let finalCardName = availableCards[Math.floor(Math.random() * availableCards.length)];
         imgFront.src = `./cards/${finalCardName}.png`;
 
         ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
 
-        // 點擊黑幕開場
         startOverlay.addEventListener('click', () => {
             document.body.classList.add('started');
             startOverlay.style.opacity = '0';
             setTimeout(() => { startOverlay.style.display = 'none'; }, 600);
         });
 
-        // 🧙‍♂️ 魔術師專用：雙擊（Double Tap）快速偵測
         let lastTapTime = 0;
         secretTrigger.addEventListener('pointerdown', (e) => {
             e.preventDefault();
@@ -276,7 +261,6 @@
             lastTapTime = currentTime;
         });
 
-        // 儲存設定
         secretConfirm.addEventListener('click', (e) => {
             e.stopPropagation();
             finalCardName = `${secretSuit.value}_${secretValue.value}`;
@@ -284,7 +268,6 @@
             secretModal.style.display = 'none';
         });
 
-        // 🎨 全設備通用指針繪畫引擎 (配合全螢幕修正 Canvas 坐標捕捉)
         canvas.addEventListener('pointerdown', (e) => { 
             if(magicState !== 0) return;
             isDrawing = true; tracePoints = []; 
@@ -297,7 +280,6 @@
         function draw(e) {
             if (!isDrawing || magicState !== 0) return;
             const rect = canvas.getBoundingClientRect();
-            // ✅ 核心修正：Canvas 坐標必須考慮 CSS Scale 導致的縮放比
             const scaleX = canvas.width / rect.width;
             const scaleY = canvas.height / rect.height;
             
@@ -333,7 +315,6 @@
             return [tl, tr, br, bl];
         }
 
-        // 🔮 點擊互動與魔法變形
         stageWrapper.addEventListener('click', (e) => {
             e.stopPropagation();
 
@@ -343,27 +324,19 @@
                 stageWrapper.classList.remove('ready-to-click'); 
                 statusText.innerText = "⏳ 正在將粒子修正為直線...";
 
-                // Canvas 尺寸 (邏輯尺寸)
                 const logicW = canvas.width;
                 const logicH = canvas.height;
-
                 const corners = getSortedCorners(tracePoints);
                 
-                // 找出幾何形狀在 Canvas 中的邏輯外框
                 let xs = corners.map(p => p.x); let ys = corners.map(p => p.y);
                 let minX = Math.min(...xs), maxX = Math.max(...xs);
                 let minY = Math.min(...ys), maxY = Math.max(...ys);
-                let logicBoxW = maxX - minX; let logicBoxH = maxY - minY;
-
-                // 🌟 核心修正：考慮剪裁容器自身的 CSS Scale (0.9)
-                // 撲克牌容器在畫布中央顯示，其 CSS 尺寸應與 Canvas 邏輯尺寸同步，
-                // 但內部需考慮剪裁的安全留白。
+                
                 card3D.style.width = `${logicW}px`; 
                 card3D.style.height = `${logicH}px`;
-                card3D.style.left = `0px`; // 滿版 Canvas
+                card3D.style.left = `0px`; 
                 card3D.style.top = `0px`;
 
-                // ✅ 核心修正：計算 Clip Path 百分比，必須完全基於 Canvas 的邏輯尺寸，不被 CSS Scale 影響
                 let pct0_x = (corners[0].x / logicW) * 100; let pct0_y = (corners[0].y / logicH) * 100;
                 let pct1_x = (corners[1].x / logicW) * 100; let pct1_y = (corners[1].y / logicH) * 100;
                 let pct2_x = (corners[2].x / logicW) * 100; let pct2_y = (corners[2].y / logicH) * 100;
@@ -374,7 +347,6 @@
                 const clipContainers = card3D.querySelectorAll('.clip-container');
                 clipContainers.forEach(container => { container.style.clipPath = clipPathString; });
                 
-                // 繪製黑框在 full canvas 上
                 const frameCanvases = card3D.querySelectorAll('.frame-canvas');
                 frameCanvases.forEach(fCanvas => {
                     fCanvas.width = logicW; fCanvas.height = logicH;
