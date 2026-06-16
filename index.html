@@ -113,17 +113,7 @@
         .clip-container.reveal { opacity: 1; }
         .frame-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; opacity: 0; transition: opacity 2.0s ease-in-out; }
         .frame-canvas.show { opacity: 1; }
-        
-        /* 🔍 修正：在這裡將撲克牌圖案縮小至 90%，留白避免被筆畫蓋住 */
-        .card-img { 
-            width: 100%; 
-            height: 100%; 
-            object-fit: fill; 
-            mix-blend-mode: multiply; 
-            filter: contrast(1.05) brightness(1.0); 
-            transform: scale(0.9); /* ✨ 縮小成90% */
-            transform-origin: center center;
-        }
+        .card-img { width: 100%; height: 100%; object-fit: fill; mix-blend-mode: multiply; filter: contrast(1.05) brightness(1.0); }
 
         /* 🧙‍♂️ 魔術師秘密基地元件 */
         #secret-trigger {
@@ -194,3 +184,186 @@
                 <option value="8">8</option>
                 <option value="9">9</option>
                 <option value="10">10</option>
+                <option value="jack">J</option>
+                <option value="queen">Q</option>
+                <option value="king">K</option>
+            </select>
+        </div>
+        <button id="secret-confirm">悄悄灌錄魔法</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('paintCanvas');
+        const ctx = canvas.getContext('2d');
+        const statusText = document.getElementById('status-text');
+        const card3D = document.getElementById('magic-card-3d');
+        const imgFront = document.getElementById('img-front');
+        const stageWrapper = document.getElementById('magic-stage-wrapper');
+        const startOverlay = document.getElementById('start-overlay');
+
+        const secretTrigger = document.getElementById('secret-trigger');
+        const secretModal = document.getElementById('secret-modal');
+        const secretConfirm = document.getElementById('secret-confirm');
+        const secretSuit = document.getElementById('secret-suit');
+        const secretValue = document.getElementById('secret-value');
+
+        let isDrawing = false;
+        let tracePoints = []; 
+        let magicState = 0; 
+
+        const availableCards = ['spade_1', 'heart_10', 'club_jack', 'diamond_king'];
+        let finalCardName = availableCards[Math.floor(Math.random() * availableCards.length)];
+        imgFront.src = `./cards/${finalCardName}.png`;
+
+        ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+
+        // 點擊 Tap to Start 開場
+        startOverlay.addEventListener('click', () => {
+            document.body.classList.add('started');
+            startOverlay.style.opacity = '0';
+            setTimeout(() => { startOverlay.style.display = 'none'; }, 600);
+        });
+
+        // 🌟 核心修正 2：🧙‍♂️ 魔術師專用「極速雙擊(Double Tap)」觸發算法
+        let lastTapTime = 0;
+        
+        secretTrigger.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            e.stopPropagation(); // 徹底切斷，防止黑幕接收到點擊
+            
+            const currentTime = Date.now();
+            const tapLength = currentTime - lastTapTime;
+            
+            // 如果兩次點擊時間差在 300 毫秒以內，判定為魔術師雙擊
+            if (tapLength < 300 && tapLength > 0) {
+                secretModal.style.display = 'block';
+            }
+            lastTapTime = currentTime;
+        });
+
+        // 儲存換牌設定
+        secretConfirm.addEventListener('click', (e) => {
+            e.stopPropagation();
+            finalCardName = `${secretSuit.value}_${secretValue.value}`;
+            imgFront.src = `./cards/${finalCardName}.png`; 
+            secretModal.style.display = 'none';
+        });
+
+        // 🎨 全設備通用繪畫引擎
+        canvas.addEventListener('pointerdown', (e) => { 
+            if(magicState !== 0) return;
+            isDrawing = true; tracePoints = []; 
+            ctx.clearRect(0, 0, canvas.width, canvas.height); 
+            e.preventDefault(); 
+        });
+
+        canvas.addEventListener('pointermove', draw);
+
+        function draw(e) {
+            if (!isDrawing || magicState !== 0) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            tracePoints.push({x, y});
+            ctx.lineTo(x, y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y);
+            e.preventDefault();
+        }
+
+        window.addEventListener('pointerup', () => { 
+            if (!isDrawing) return;
+            isDrawing = false; 
+            if (tracePoints.length > 10) {
+                magicState = 1;
+                statusText.innerText = "👉 畫得很好！現在請用手指「點擊畫布施展魔法」...";
+                statusText.classList.add('pulse-hint');
+                stageWrapper.classList.add('ready-to-click');
+            }
+        });
+
+        function getSortedCorners(pts) {
+            let tl = pts[0], tr = pts[0], br = pts[0], bl = pts[0];
+            let minSum = Infinity, maxSum = -Infinity, minDiff = Infinity, maxDiff = -Infinity;
+            pts.forEach(p => {
+                let sum = p.x + p.y, diff = p.x - p.y;
+                if (sum < minSum) { minSum = sum; tl = p; }   
+                if (sum > maxSum) { maxSum = sum; br = p; }   
+                if (diff > maxDiff) { maxDiff = diff; tr = p; } 
+                if (diff < minDiff) { minDiff = diff; bl = p; } 
+            });
+            return [tl, tr, br, bl];
+        }
+
+        // 🔮 點擊互動與魔法變形 (保留原手繪圖騰)
+        stageWrapper.addEventListener('click', (e) => {
+            e.stopPropagation();
+
+            if (magicState === 1) {
+                magicState = 3; 
+                statusText.classList.remove('pulse-hint');
+                stageWrapper.classList.remove('ready-to-click'); 
+                statusText.innerText = "⏳ 魔法正在注入你的手繪圖騰...";
+
+                const corners = getSortedCorners(tracePoints);
+                
+                // 使用「所有」筆跡點來計算真實邊界，並加入 5px 緩衝
+                let allXs = tracePoints.map(p => p.x); 
+                let allYs = tracePoints.map(p => p.y);
+                let minX = Math.min(...allXs) - 5; 
+                let maxX = Math.max(...allXs) + 5;
+                let minY = Math.min(...allYs) - 5; 
+                let maxY = Math.max(...allYs) + 5;
+                
+                let boxWidth = maxX - minX; 
+                let boxHeight = maxY - minY;
+                
+                card3D.style.width = `${boxWidth}px`; 
+                card3D.style.height = `${boxHeight}px`;
+                card3D.style.left = `${minX}px`; 
+                card3D.style.top = `${minY}px`;
+                
+                let pct0_x = ((corners[0].x - minX) / boxWidth) * 100; let pct0_y = ((corners[0].y - minY) / boxHeight) * 100;
+                let pct1_x = ((corners[1].x - minX) / boxWidth) * 100; let pct1_y = ((corners[1].y - minY) / boxHeight) * 100;
+                let pct2_x = ((corners[2].x - minX) / boxWidth) * 100; let pct2_y = ((corners[2].y - minY) / boxHeight) * 100;
+                let pct3_x = ((corners[3].x - minX) / boxWidth) * 100; let pct3_y = ((corners[3].y - minY) / boxHeight) * 100;
+                const clipPathString = `polygon(${pct0_x}% ${pct0_y}%, ${pct1_x}% ${pct1_y}%, ${pct2_x}% ${pct2_y}%, ${pct3_x}% ${pct3_y}%)`;
+                
+                const clipContainers = card3D.querySelectorAll('.clip-container');
+                clipContainers.forEach(container => { container.style.clipPath = clipPathString; });
+                
+                const frameCanvases = card3D.querySelectorAll('.frame-canvas');
+                frameCanvases.forEach(fCanvas => {
+                    fCanvas.width = boxWidth; fCanvas.height = boxHeight;
+                    const fCtx = fCanvas.getContext('2d');
+                    
+                    // 💡 直接將主畫布上的原始筆跡，原封不動「拷貝」到撲克牌上
+                    fCtx.drawImage(canvas, minX, minY, boxWidth, boxHeight, 0, 0, boxWidth, boxHeight);
+                });
+
+                // 清除主畫布，準備展示 3D 卡牌
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                card3D.style.display = 'block';
+                frameCanvases.forEach(fCanvas => fCanvas.classList.add('show'));
+
+                setTimeout(() => {
+                    statusText.innerText = "🔮 偵測到時空波動，牌背正在凝聚...";
+                    clipContainers.forEach(container => container.classList.add('reveal'));
+                }, 300);
+
+                setTimeout(() => {
+                    magicState = 2;
+                    statusText.innerText = "🃏 奇蹟誕生！用手指「點擊撲克牌」將它翻面...";
+                    statusText.classList.add('pulse-hint');
+                    stageWrapper.classList.add('ready-to-click'); 
+                }, 3500);
+            }
+            else if (magicState === 2) {
+                magicState = 3; 
+                statusText.classList.remove('pulse-hint');
+                stageWrapper.classList.remove('ready-to-click');
+                statusText.innerText = "✨ 正在揭曉你的神奇卡牌...";
+                card3D.style.transform = `rotateY(180deg)`;
+            }
+        });
+    </script>
+</body>
+</html>
