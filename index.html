@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Cardtoon - 專業心靈控牌劇場舞台</title>
+    <title>Cardtoon - 直立手機魔術專用舞台</title>
     <style>
         body { 
             margin: 0; 
@@ -17,16 +17,13 @@
             min-height: 100vh; font-family: sans-serif; color: #fff;
             user-select: none;
             overscroll-behavior: none;
-            
-            /* 初始狀態固定在最左側暗場 */
             background-position: -50% center; 
         }
 
-        /* 🌟 核心修正 1：當 body 被加上 .started 類別時，火柴人進場動畫才啟動 (3秒) */
+        /* 🎬 預設橫置/電腦版動畫 */
         body.started {
             animation: stickmanEnter 3.0s cubic-bezier(0.25, 1, 0.5, 1) forwards;
         }
-
         @keyframes stickmanEnter {
             from { background-position: -50% center; }
             to { background-position: 25% center; }
@@ -37,12 +34,9 @@
             margin-left: 180px; 
             opacity: 0; 
         }
-
-        /* 🌟 核心修正 2：當開始後，畫架動畫才正式在第 1.2 秒切入 (2.4秒) */
         body.started #magic-setup {
             animation: easelUp 2.4s cubic-bezier(0.175, 0.885, 0.32, 1.1) 1.2s forwards;
         }
-
         @keyframes easelUp {
             from { transform: translateY(100vh); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
@@ -53,34 +47,56 @@
             text-shadow: 0 2px 8px rgba(0,0,0,0.9); width: 500px; line-height: 1.5;
             opacity: 0;
         }
-        /* 🌟 核心修正 3：引導台詞在第 3.6 秒定格後浮現 */
         body.started #status-text {
             animation: fadeInText 0.5s ease 3.6s forwards;
         }
         @keyframes fadeInText { to { opacity: 1; } }
 
-        /* 🌟 核心修正 4：新增最一開始的 "Tap to Start." 覆蓋黑幕 */
+        /* 🌟 修正 1：📱 直立手機螢幕 (Portrait Mobile) 完美版面配置 */
+        @media (max-width: 500px) and (orientation: portrait) {
+            body {
+                background-size: 110%; /* 讓火柴人在手機上顯得更清晰 */
+            }
+            body.started {
+                /* 啟動手機專用背景滑入：讓火柴人靠螢幕左邊 */
+                animation: stickmanEnterMobile 3.0s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+            }
+            @keyframes stickmanEnterMobile {
+                from { background-position: -150% center; }
+                to { background-position: -25% center; } /* 完美的左側邊緣靠攏 */
+            }
+            #magic-setup {
+                margin-left: 0;
+                position: absolute;
+                right: 8px; /* 🧲 強力吸附在螢幕右側 */
+                transform: scale(0.52); /* 🔍 縮小畫架，確保窄螢幕不跑版 */
+                transform-origin: right center;
+            }
+            #status-text {
+                width: 320px; /* 手機版文字換行優化 */
+                font-size: 26px; /* 稍微放大，方便魔術師斜眼偷看 */
+                margin-bottom: 15px;
+            }
+        }
+
+        /* 開幕黑幕 */
         #start-overlay {
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
-            background: #111111; /* 純黑神祕開場 */
-            display: flex; justify-content: center; align-items: center;
-            z-index: 9999; /* 僅次於魔術師按鈕 */
-            cursor: pointer;
-            transition: opacity 0.6s ease-in-out;
+            background: #111111; display: flex; justify-content: center; align-items: center;
+            z-index: 9999; cursor: pointer; transition: opacity 0.6s ease-in-out;
         }
         #start-prompt {
             font-size: 32px; color: #f3c623; font-weight: bold; letter-spacing: 2px;
             animation: textPulse 1.5s infinite alternate;
         }
-
         .pulse-hint { animation: textPulse 1.5s infinite alternate; }
         @keyframes textPulse {
             from { text-shadow: 0 2px 8px rgba(243, 198, 35, 0.3); transform: scale(0.98); }
             to { text-shadow: 0 2px 25px rgba(243, 198, 35, 1); color: #fff; transform: scale(1.02); }
         }
 
-        /* 畫架與畫布元件保持不變... */
+        /* 畫架結構元件 */
         #magic-stage-wrapper { position: relative; padding-bottom: 40px; }
         #magic-stage-wrapper::before { content: ""; position: absolute; bottom: -120px; left: 50%; width: 14px; height: 160px; background: #73421A; transform: translateX(-50%); z-index: 1; border-radius: 4px; box-shadow: 5px 5px 15px rgba(0,0,0,0.5); }
         #magic-stage { position: relative; width: 360px; height: 440px; background: #fafafa; border-radius: 6px; box-shadow: 0 30px 70px rgba(0,0,0,0.8), inset 0 0 30px rgba(0,0,0,0.02); border: 1px solid #e0e0e0; perspective: 1500px; z-index: 3; }
@@ -99,27 +115,13 @@
         .frame-canvas.show { opacity: 1; }
         .card-img { width: 100%; height: 100%; object-fit: fill; mix-blend-mode: multiply; filter: contrast(1.05) brightness(1.0); }
 
-        /* 手機橫置（Landscape）響應式優化 */
-        @media (orientation: landscape) and (max-height: 550px) {
-            body.started {
-                background-size: 65%;
-                background-position: 12% center;
-            }
-            #magic-setup {
-                transform: scale(0.58);
-                transform-origin: center center;
-                margin-left: 160px;
-                margin-top: -10px;
-            }
-        }
-
-        /* 🧙‍♂️ 魔術師秘密基地：完全隱形按鈕與彈窗控制 */
+        /* 🧙‍♂️ 魔術師秘密基地元件 */
         #secret-trigger {
             position: fixed;
             bottom: 0; right: 0;
-            width: 80px; height: 80px;
+            width: 90px; height: 90px; /* 稍微放大，方便盲按雙擊 */
             background: transparent;
-            z-index: 10000; /* 最高層級，確保凌駕於 Tap to Start 黑幕之上 */
+            z-index: 10000; 
             cursor: default;
             -webkit-tap-highlight-color: transparent;
         }
@@ -130,7 +132,7 @@
             transform: translate(-50%, -50%);
             background: rgba(25, 25, 25, 0.98);
             border: 2px solid #f3c623; border-radius: 12px;
-            padding: 25px; z-index: 10001; /* 最頂層 */
+            padding: 25px; z-index: 10001;
             display: none; color: white; font-family: sans-serif;
             box-shadow: 0 0 40px rgba(0,0,0,1); text-align: center;
         }
@@ -148,7 +150,7 @@
     </div>
 
     <div id="magic-setup">
-        <h3 id="status-text"> 請在畫架上，一筆畫出一個撲克牌框...</h3>
+        <h3 id="status-text">✏️ 請用鉛筆在木畫架上，一筆畫出一個撲克牌框...</h3>
         <div id="magic-stage-wrapper">
             <div id="magic-stage">
                 <canvas id="paintCanvas" width="360" height="440"></canvas>
@@ -197,11 +199,8 @@
         const card3D = document.getElementById('magic-card-3d');
         const imgFront = document.getElementById('img-front');
         const stageWrapper = document.getElementById('magic-stage-wrapper');
-        
-        // 新增黑幕開場 DOM
         const startOverlay = document.getElementById('start-overlay');
 
-        // 魔術師後台 DOM
         const secretTrigger = document.getElementById('secret-trigger');
         const secretModal = document.getElementById('secret-modal');
         const secretConfirm = document.getElementById('secret-confirm');
@@ -210,39 +209,39 @@
 
         let isDrawing = false;
         let tracePoints = []; 
-        let magicState = 0; // 0=繪畫, 1=點擊修正, 2=等待翻牌, 3=動態保護
+        let magicState = 0; 
 
-        // 基本盤防穿幫隨機牌
         const availableCards = ['spade_1', 'heart_10', 'club_jack', 'diamond_king'];
         let finalCardName = availableCards[Math.floor(Math.random() * availableCards.length)];
         imgFront.src = `./cards/${finalCardName}.png`;
 
         ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
 
-        // 🌟 核心修正 5：Tap to Start 點擊事件，點了之後才觸發所有 CSS 動畫
+        // 點擊 Tap to Start 開場
         startOverlay.addEventListener('click', () => {
             document.body.classList.add('started');
             startOverlay.style.opacity = '0';
-            setTimeout(() => {
-                startOverlay.style.display = 'none';
-            }, 600); // 動畫淡出後徹底隱藏黑幕
+            setTimeout(() => { startOverlay.style.display = 'none'; }, 600);
         });
 
-        // 🌟 🧙‍♂️ 魔術師隨時長按後台控制邏輯 (優先級最高)
-        let pressTimer;
+        // 🌟 核心修正 2：🧙‍♂️ 魔術師專用「極速雙擊(Double Tap)」觸發算法
+        let lastTapTime = 0;
         
         secretTrigger.addEventListener('pointerdown', (e) => {
             e.preventDefault();
-            e.stopPropagation(); // 防止長按觸發 start-overlay 的點擊
-            pressTimer = window.setTimeout(() => {
-                secretModal.style.display = 'block'; 
-            }, 1000);
+            e.stopPropagation(); // 徹底切斷，防止黑幕接收到點擊
+            
+            const currentTime = Date.now();
+            const tapLength = currentTime - lastTapTime;
+            
+            // 如果兩次點擊時間差在 300 毫秒以內，判定為魔術師雙擊
+            if (tapLength < 300 && tapLength > 0) {
+                secretModal.style.display = 'block';
+            }
+            lastTapTime = currentTime;
         });
 
-        secretTrigger.addEventListener('pointerup', (e) => { e.stopPropagation(); clearTimeout(pressTimer); });
-        secretTrigger.addEventListener('pointerleave', (e) => { e.stopPropagation(); clearTimeout(pressTimer); });
-
-        // 秘密換牌儲存
+        // 儲存換牌設定
         secretConfirm.addEventListener('click', (e) => {
             e.stopPropagation();
             finalCardName = `${secretSuit.value}_${secretValue.value}`;
@@ -250,7 +249,7 @@
             secretModal.style.display = 'none';
         });
 
-        // 🌟 全設備通用指針繪畫引擎
+        // 🎨 全設備通用繪畫引擎
         canvas.addEventListener('pointerdown', (e) => { 
             if(magicState !== 0) return;
             isDrawing = true; tracePoints = []; 
@@ -275,7 +274,7 @@
             isDrawing = false; 
             if (tracePoints.length > 10) {
                 magicState = 1;
-                statusText.innerText = "👉 畫得很好！現在請點擊畫布...";
+                statusText.innerText = "👉 畫得很好！現在請用手指「點擊畫布施展魔法」...";
                 statusText.classList.add('pulse-hint');
                 stageWrapper.classList.add('ready-to-click');
             }
@@ -294,7 +293,7 @@
             return [tl, tr, br, bl];
         }
 
-        // 🔮 點擊互動與魔法顯影流程
+        // 🔮 點擊互動與魔法變形
         stageWrapper.addEventListener('click', (e) => {
             e.stopPropagation();
 
@@ -302,7 +301,7 @@
                 magicState = 3; 
                 statusText.classList.remove('pulse-hint');
                 stageWrapper.classList.remove('ready-to-click'); 
-                statusText.innerText = "正在顯現撲克牌...";
+                statusText.innerText = "⏳ 正在將粒子修正為直線...";
 
                 const corners = getSortedCorners(tracePoints);
                 let xs = corners.map(p => p.x); let ys = corners.map(p => p.y);
@@ -339,13 +338,13 @@
                 frameCanvases.forEach(fCanvas => fCanvas.classList.add('show'));
 
                 setTimeout(() => {
-                    statusText.innerText = "撲克牌顯示中...";
+                    statusText.innerText = "🔮 偵測到時空波動，牌背正在凝聚...";
                     clipContainers.forEach(container => container.classList.add('reveal'));
                 }, 300);
 
                 setTimeout(() => {
                     magicState = 2;
-                    statusText.innerText = "請點擊撲克牌，將它翻面...";
+                    statusText.innerText = "🃏 奇蹟誕生！用手指「點擊撲克牌」將它翻面...";
                     statusText.classList.add('pulse-hint');
                     stageWrapper.classList.add('ready-to-click'); 
                 }, 3500);
@@ -354,7 +353,7 @@
                 magicState = 3; 
                 statusText.classList.remove('pulse-hint');
                 stageWrapper.classList.remove('ready-to-click');
-                statusText.innerText = "你的牌是...";
+                statusText.innerText = "✨ 正在揭曉你的神奇卡牌...";
                 card3D.style.transform = `rotateY(180deg)`;
             }
         });
