@@ -21,7 +21,6 @@
         body.started { animation: stickmanEnter 3.0s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
         @keyframes stickmanEnter { from { background-position: -50% center; } to { background-position: 25% center; } }
         
-        /* 🛠 修正動畫縮放覆蓋問題，利用 --scale-factor 保持比例 */
         #magic-setup { 
             --scale-factor: 1;
             display: flex; flex-direction: column; align-items: center; 
@@ -39,7 +38,7 @@
 
         @media (max-width: 500px) and (orientation: portrait) {
             body { background-size: 110%; }
-            #magic-setup { margin-top: 80px; --scale-factor: 0.85; } /* 修正手機版的頂部距離與比例 */
+            #magic-setup { margin-top: 80px; --scale-factor: 0.85; } 
             #status-text { width: 340px; font-size: 22px; margin-bottom: 20px; }
         }
 
@@ -69,7 +68,6 @@
         
         .card-img { width: 100%; height: 100%; object-fit: fill; mix-blend-mode: multiply; filter: contrast(1.05) brightness(1.0); transform: scale(0.8); transform-origin: center center; }
 
-        /* 🛠 穩定的按鈕容器 */
         #button-wrapper { margin-top: 35px; display: flex; justify-content: center; align-items: center; min-height: 50px; z-index: 10; opacity: 0; }
         body.started #button-wrapper { animation: fadeInText 0.5s ease 3.8s forwards; }
         #action-buttons { display: flex; gap: 30px; }
@@ -241,12 +239,18 @@
             actionButtons.style.display = 'none';
         });
 
+        // 🛠 修正 pointerdown 座標計算
         canvas.addEventListener('pointerdown', (e) => {
             if(magicState > 0 && magicState < 4) return;
             isDrawing = true;
             const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            // 計算縮放比例
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            // 套用比例修正座標
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            
             if (magicState === 0) {
                 tracePoints = [];
                 if (savedCanvasState) ctx.putImageData(savedCanvasState, 0, 0);
@@ -255,11 +259,17 @@
             ctx.moveTo(x, y);
         });
 
+        // 🛠 修正 pointermove 座標計算
         canvas.addEventListener('pointermove', (e) => {
             if (!isDrawing || (magicState > 0 && magicState < 4)) return;
             const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            // 計算縮放比例
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            // 套用比例修正座標
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+
             if (magicState === 0) tracePoints.push({x, y});
             ctx.lineTo(x, y);
             ctx.stroke();
