@@ -59,7 +59,8 @@
         
         .frame-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
         
-        .card-img { width: 100%; height: 100%; object-fit: fill; mix-blend-mode: multiply; filter: contrast(1.05) brightness(1.0); transform: scale(0.9); transform-origin: center center; }
+        /* 🎨 縮小至 80%，讓白邊更明顯 */
+        .card-img { width: 100%; height: 100%; object-fit: fill; mix-blend-mode: multiply; filter: contrast(1.05) brightness(1.0); transform: scale(0.8); transform-origin: center center; }
 
         #action-buttons { margin-top: 35px; display: flex; gap: 30px; justify-content: center; z-index: 10; opacity: 0; }
         body.started #action-buttons { animation: fadeInText 0.5s ease 3.8s forwards; }
@@ -286,7 +287,6 @@
                 const fCanvasBack = card3D.querySelector('.card-back .frame-canvas');
                 const fCanvasFront = card3D.querySelector('.card-front .frame-canvas');
 
-                // 畫在牌背：不再截圖！改用 tracePoints 重新繪製出「純淨的線條」，完全不含魔術師背景
                 fCanvasBack.width = boxWidth; fCanvasBack.height = boxHeight;
                 const fCtxBack = fCanvasBack.getContext('2d');
                 fCtxBack.strokeStyle = '#1a1a1a'; fCtxBack.lineWidth = 4; fCtxBack.lineCap = 'round'; fCtxBack.lineJoin = 'round';
@@ -297,7 +297,6 @@
                 });
                 fCtxBack.stroke();
 
-                // 畫在牌面：啟用鏡像反轉，同樣使用純淨線條重繪
                 fCanvasFront.width = boxWidth; fCanvasFront.height = boxHeight;
                 const fCtxFront = fCanvasFront.getContext('2d');
                 fCtxFront.translate(boxWidth, 0); 
@@ -310,12 +309,10 @@
                 });
                 fCtxFront.stroke();
 
-                // 恢復原先主畫布的狀態（只有魔術師，拿掉觀眾畫的框，交由 3D 撲克牌來顯示框）
                 if (savedCanvasState) {
                     ctx.putImageData(savedCanvasState, 0, 0);
                 }
 
-                // 瞬間顯示 3D 卡片與手繪線條，z-index 設為 30 確保它疊在畫布之上，完美遮擋下方的魔術師！
                 card3D.style.zIndex = '30'; 
                 card3D.style.display = 'block';
 
