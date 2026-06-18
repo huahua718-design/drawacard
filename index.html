@@ -21,9 +21,17 @@
         body.started { animation: stickmanEnter 3.0s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
         @keyframes stickmanEnter { from { background-position: -50% center; } to { background-position: 25% center; } }
         
-        #magic-setup { display: flex; flex-direction: column; align-items: center; margin-top: 100px; opacity: 0; }
+        /* 🛠 修正動畫縮放覆蓋問題，利用 --scale-factor 保持比例 */
+        #magic-setup { 
+            --scale-factor: 1;
+            display: flex; flex-direction: column; align-items: center; 
+            margin-top: 100px; opacity: 0; transform-origin: top center;
+        }
         body.started #magic-setup { animation: easelUp 2.4s cubic-bezier(0.175, 0.885, 0.32, 1.1) 1.8s forwards; }
-        @keyframes easelUp { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes easelUp { 
+            from { transform: translateY(-50px) scale(var(--scale-factor)); opacity: 0; } 
+            to { transform: translateY(0) scale(var(--scale-factor)); opacity: 1; } 
+        }
         
         #status-text { text-align: center; margin: 0 0 20px 0; color: #f3c623; font-size: 20px; font-weight: bold; text-shadow: 0 2px 8px rgba(0,0,0,0.9); width: 320px; line-height: 1.5; opacity: 0; }
         body.started #status-text { animation: fadeInText 0.5s ease 3.8s forwards; }
@@ -31,7 +39,7 @@
 
         @media (max-width: 500px) and (orientation: portrait) {
             body { background-size: 110%; }
-            #magic-setup { margin-top: 60px; transform: scale(0.85); transform-origin: top center; }
+            #magic-setup { margin-top: 80px; --scale-factor: 0.85; } /* 修正手機版的頂部距離與比例 */
             #status-text { width: 340px; font-size: 22px; margin-bottom: 20px; }
         }
 
@@ -59,17 +67,18 @@
         
         .frame-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
         
-        /* 🎨 縮小至 80%，讓白邊更明顯 */
         .card-img { width: 100%; height: 100%; object-fit: fill; mix-blend-mode: multiply; filter: contrast(1.05) brightness(1.0); transform: scale(0.8); transform-origin: center center; }
 
-        #action-buttons { margin-top: 35px; display: flex; gap: 30px; justify-content: center; z-index: 10; opacity: 0; }
-        body.started #action-buttons { animation: fadeInText 0.5s ease 3.8s forwards; }
+        /* 🛠 穩定的按鈕容器 */
+        #button-wrapper { margin-top: 35px; display: flex; justify-content: center; align-items: center; min-height: 50px; z-index: 10; opacity: 0; }
+        body.started #button-wrapper { animation: fadeInText 0.5s ease 3.8s forwards; }
+        #action-buttons { display: flex; gap: 30px; }
+        
         .action-btn { padding: 12px 28px; font-size: 20px; border-radius: 8px; border: 2px solid #8C5323; background: #fafafa; color: #592E0F; cursor: pointer; font-weight: bold; box-shadow: 0 6px 12px rgba(0,0,0,0.6); transition: transform 0.1s; font-family: sans-serif; }
         .action-btn.primary { background: #f3c623; border-color: #d4a700; color: #111; }
         .action-btn:active { transform: scale(0.95); }
 
-        /* Try Again 按鈕動態外觀 */
-        #btn-again { display: none; background: #f3c623; border-color: #d4a700; color: #111; margin-top: 35px; z-index: 10; }
+        #btn-again { display: none; background: #f3c623; border-color: #d4a700; color: #111; }
         
         #secret-trigger { position: fixed; bottom: 0; right: 0; width: 90px; height: 90px; z-index: 10000; -webkit-tap-highlight-color: transparent;}
         #secret-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(25, 25, 25, 0.98); border: 2px solid #f3c623; border-radius: 12px; padding: 25px; z-index: 10001; display: none; color: white; text-align: center; }
@@ -95,11 +104,13 @@
                 </div>
             </div>
         </div>
-        <div id="action-buttons">
-            <button id="btn-clear" class="action-btn">Clear</button>
-            <button id="btn-next" class="action-btn primary">Next</button>
+        <div id="button-wrapper">
+            <div id="action-buttons">
+                <button id="btn-clear" class="action-btn">Clear</button>
+                <button id="btn-next" class="action-btn primary">Next</button>
+            </div>
+            <button id="btn-again" class="action-btn primary">Try Again</button>
         </div>
-        <button id="btn-again" class="action-btn primary">Try Again</button>
     </div>
 
     <div id="secret-trigger"></div>
@@ -138,22 +149,17 @@
             lastTouchEnd = nowTime;
         }, { passive: false });
         
-        // 🔮 依據指定規則排列的花色陣列：紅心 -> 黑桃 -> 方塊 -> 梅花
         const suitOrder = ["heart", "spade", "diamond", "club"];
-        
-        // 初始根據日期時間設定卡片
         const now = new Date();
         const initialMonth = now.getMonth() + 1; 
         const date = now.getDate();       
         const remainder = date % 4;
         
-        // 對應原本預設初始花色邏輯
         let currentSuit = (remainder === 1) ? "club" : (remainder === 2) ? "diamond" : (remainder === 3) ? "heart" : "spade";
-        let currentValString = initialMonth.toString(); // 原本為 '1'~'12'，JQK 分別為 'jack','queen','king'
+        let currentValString = initialMonth.toString();
         
         const imgFront = document.getElementById('img-front');
         
-        // 輔助函式：將字串或數字轉成檔案名稱所需格式
         function getCardValueName(val) {
             if (val === 1 || val === '1') return '1';
             if (val === 11 || val === 'jack') return 'jack';
@@ -162,7 +168,6 @@
             return val.toString();
         }
         
-        // 輔助函式：將目前的數值名稱轉成純數字方便加算
         function getCardValueNumber(valName) {
             if (valName === 'jack') return 11;
             if (valName === 'queen') return 12;
@@ -174,7 +179,6 @@
             imgFront.src = `./cards/${currentSuit}_${getCardValueName(currentValString)}.png`; 
         }
         
-        // 初始化第一次卡片
         syncFrontImage();
         
         const canvas = document.getElementById('paintCanvas');
@@ -214,7 +218,6 @@
             const currentTime = Date.now();
             if (currentTime - lastTapTime < 300 && currentTime - lastTapTime > 0) {
                 secretModal.style.display = 'block';
-                // 讓後門選單同步當前狀態
                 secretSuit.value = currentSuit;
                 secretValue.value = getCardValueName(currentValString);
             }
@@ -376,17 +379,14 @@
                 setTimeout(() => {
                     magicState = 4;
                     statusText.innerText = "🎨 The magic is complete! Feel free to continue drawing...";
-                    // 魔術表演結束，顯示 Try Again 按鈕
                     btnAgain.style.display = 'block';
                 }, 1500);
             }
         });
 
-        // 🔄 處理重置按鈕點擊，注入下一張升級卡片
         btnAgain.addEventListener('click', (e) => {
             e.stopPropagation();
 
-            // 1. 計算下一個數字：原本數值加 5，若大於 13 則減 13
             let currentNum = getCardValueNumber(currentValString);
             let nextNum = currentNum + 5;
             if (nextNum > 13) {
@@ -394,16 +394,13 @@
             }
             currentValString = getCardValueName(nextNum);
 
-            // 2. 計算下一個花色：紅心 -> 黑桃 -> 方塊 -> 梅花 -> 紅心
             let currentSuitIdx = suitOrder.indexOf(currentSuit);
-            if (currentSuitIdx === -1) currentSuitIdx = 0; // 防止例外防呆
+            if (currentSuitIdx === -1) currentSuitIdx = 0; 
             let nextSuitIdx = (currentSuitIdx + 1) % 4;
             currentSuit = suitOrder[nextSuitIdx];
 
-            // 3. 同步新卡片圖案到前端
             syncFrontImage();
 
-            // 4. 重置畫布狀態與 3D 物件
             magicState = -1;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
@@ -413,7 +410,6 @@
             const clipContainers = card3D.querySelectorAll('.clip-container');
             clipContainers.forEach(container => container.classList.remove('reveal'));
 
-            // 5. 復原 UI 控制元件
             btnAgain.style.display = 'none';
             actionButtons.style.display = 'flex';
             statusText.innerText = "✏️ Please draw a magician";
