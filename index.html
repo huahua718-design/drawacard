@@ -2,9 +2,14 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover">
     <title>Cardtoon - 直立手機魔術專用舞台</title>
     <style>
+        /* 🔒 增加 touch-action: manipulation 與 none 的組合，告訴瀏覽器放棄雙擊手勢 */
+        html, body {
+            touch-action: none;
+            -webkit-text-size-adjust: none; /* 防止 iOS 旋轉時字體放大 */
+        }
         body { 
             margin: 0; 
             background-image: url('./image_6.png'); 
@@ -16,8 +21,8 @@
             display: flex; flex-direction: column; justify-content: center; align-items: center; 
             min-height: 100vh; font-family: sans-serif; color: #fff;
             user-select: none;
+            -webkit-user-select: none;
             overscroll-behavior: none;
-            touch-action: none; /* 🔒 修正 2：徹底禁用原生的雙擊放大與滑動手勢 */
             background-position: -50% center; 
         }
 
@@ -85,6 +90,7 @@
             top: 0; left: 0; width: 100vw; height: 100vh;
             background: #111111; display: flex; justify-content: center; align-items: center;
             z-index: 9999; cursor: pointer; transition: opacity 0.6s ease-in-out;
+            touch-action: none;
         }
         #start-prompt {
             font-size: 32px; color: #f3c623; font-weight: bold; letter-spacing: 2px;
@@ -133,6 +139,7 @@
             z-index: 10000; 
             cursor: default;
             -webkit-tap-highlight-color: transparent;
+            touch-action: none; /* 🔒 單獨鎖定此區塊的任何原生手勢 */
         }
 
         #secret-modal {
@@ -202,6 +209,26 @@
     </div>
 
     <script>
+        // 🔒 全域防護網：強制攔截 iOS Safari 雙指縮放與雙擊縮放
+        document.addEventListener('touchstart', function(event) {
+            if (event.touches.length > 1) {
+                event.preventDefault(); // 阻止雙指縮放
+            }
+        }, { passive: false });
+
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(event) {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                // 如果點擊目標不是秘密面版的按鈕/選單，就強硬阻擋雙擊放大
+                if (!event.target.closest('#secret-modal')) {
+                    event.preventDefault(); 
+                }
+            }
+            lastTouchEnd = now;
+        }, { passive: false });
+
+        // 以下為原本的邏輯
         const canvas = document.getElementById('paintCanvas');
         const ctx = canvas.getContext('2d');
         const statusText = document.getElementById('status-text');
@@ -226,17 +253,19 @@
 
         ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
 
-        // 🐞 修正 3：將 'click' 改成 'pointerdown'，避免在手機上被阻擋
-        startOverlay.addEventListener('pointerdown', () => {
+        // 🌟 使用 touchstart 代替 pointerdown/click，避免觸發後續的雙擊判定
+        startOverlay.addEventListener('touchstart', (e) => {
+            e.preventDefault();
             document.body.classList.add('started');
             startOverlay.style.opacity = '0';
             setTimeout(() => { startOverlay.style.display = 'none'; }, 600);
-        });
+        }, { passive: false });
 
         let lastTapTime = 0;
         
-        secretTrigger.addEventListener('pointerdown', (e) => {
-            e.preventDefault();
+        // 🌟 魔術秘密按鈕也改為最基層的 touchstart，當場吃掉事件
+        secretTrigger.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // 徹底斬斷原生雙擊邏輯
             e.stopPropagation();
             
             const currentTime = Date.now();
@@ -246,7 +275,7 @@
                 secretModal.style.display = 'block';
             }
             lastTapTime = currentTime;
-        });
+        }, { passive: false });
 
         secretConfirm.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -255,6 +284,7 @@
             secretModal.style.display = 'none';
         });
 
+        // 繪圖區保持原樣，使用 pointer 事件即可
         canvas.addEventListener('pointerdown', (e) => { 
             if(magicState !== 0) return;
             isDrawing = true; tracePoints = []; 
