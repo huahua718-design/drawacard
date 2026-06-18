@@ -29,12 +29,27 @@
         body.started #status-text { animation: fadeInText 0.5s ease 3.6s forwards; }
         @keyframes fadeInText { to { opacity: 1; } }
 
+        /* 📱 手機版畫面最佳化調整（修正垂直置中與字體大小） */
         @media (max-width: 500px) and (orientation: portrait) {
             body { background-size: 110%; }
             body.started { animation: stickmanEnterMobile 3.0s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
             @keyframes stickmanEnterMobile { from { background-position: -150% center; } to { background-position: -25% center; } }
-            #magic-setup { margin-left: 0; position: absolute; right: 8px; transform: scale(0.52); transform-origin: right center; }
-            #status-text { width: 320px; font-size: 26px; margin-bottom: 15px; }
+            
+            #magic-setup { 
+                margin-left: 0; 
+                position: absolute; 
+                right: 8px; 
+                top: 0; 
+                bottom: 0; 
+                margin: auto; 
+                height: 750px; 
+                justify-content: center;
+                transform: scale(0.52); 
+                transform-origin: right center; 
+            }
+            #status-text { width: 400px; font-size: 34px; margin-bottom: 25px; }
+            #action-buttons { margin-top: 130px; gap: 40px; }
+            .action-btn { padding: 16px 36px; font-size: 24px; }
         }
 
         #start-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #111111; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; cursor: pointer; transition: opacity 0.6s ease-in-out; touch-action: none; text-align: center; }
@@ -216,7 +231,7 @@
         });
 
         canvas.addEventListener('pointerdown', (e) => { 
-            // 🔓 允許初始狀態(-1)與最終自由繪圖狀態(4)作畫，封鎖魔法過渡期間(1, 2, 3)
+            // 🔓 允許初始狀態(-1)與最終自由繪圖狀態(4)作畫
             if(magicState > 0 && magicState < 4) return; 
             isDrawing = true; 
             
@@ -351,7 +366,7 @@
                 statusText.innerText = "✨ Revealing your magic card...";
                 card3D.style.transform = `rotateY(180deg)`;
 
-                // 🔓 動畫結束後（約 1.5 秒），解鎖畫布，進入狀態 4
+                // 🔓 動畫結束後，解鎖畫布，進入狀態 4
                 setTimeout(() => {
                     magicState = 4;
                     statusText.innerText = "🎨 The magic is complete! Feel free to continue drawing...";
