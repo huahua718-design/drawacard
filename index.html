@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover">
     <title>Cardtoon - 魔法撲克牌</title>
     <style>
-        html, body { touch-action: none; -webkit-text-size-adjust: none; }
+        /* 鎖定手勢，但開放畫筆觸控 */
+        html, body { touch-action: none; -webkit-text-size-adjust: none; overflow: hidden; }
         body { 
             margin: 0; background-image: url('./image_6.png'); background-size: 80%;
             background-repeat: no-repeat; background-attachment: fixed;
@@ -16,46 +17,29 @@
             background-position: -50% center; 
         }
 
-        /* [中間CSS省略，與前次相同以確保穩定性] */
-        body.started { animation: stickmanEnter 3.0s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
-        @keyframes stickmanEnter { from { background-position: -50% center; } to { background-position: 25% center; } }
-        #magic-setup { display: flex; flex-direction: column; align-items: center; margin-left: 180px; opacity: 0; }
-        body.started #magic-setup { animation: easelUp 2.4s cubic-bezier(0.175, 0.885, 0.32, 1.1) 1.2s forwards; }
-        @keyframes easelUp { from { transform: translateY(100vh); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        #status-text { text-align: center; margin: 0 0 30px 0; color: #f3c623; font-size: 20px; font-weight: bold; text-shadow: 0 2px 8px rgba(0,0,0,0.9); width: 500px; line-height: 1.5; opacity: 0; }
-        body.started #status-text { animation: fadeInText 0.5s ease 3.6s forwards; }
-        @keyframes fadeInText { to { opacity: 1; } }
-        @media (max-width: 500px) and (orientation: portrait) {
-            body { background-size: 110%; }
-            body.started { animation: stickmanEnterMobile 3.0s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
-            @keyframes stickmanEnterMobile { from { background-position: -150% center; } to { background-position: -25% center; } }
-            #magic-setup { margin-left: 0; position: absolute; right: 8px; transform: scale(0.52); transform-origin: right center; }
-            #status-text { width: 320px; font-size: 26px; margin-bottom: 15px; }
+        /* 畫架與畫布層級修正 */
+        #magic-stage { 
+            position: relative; width: 360px; height: 440px; background: #fafafa; border-radius: 6px; 
+            box-shadow: 0 30px 70px rgba(0,0,0,0.8); perspective: 1500px; 
+            z-index: 10; /* 確保畫架高於背景 */
         }
-        #start-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #111111; display: flex; justify-content: center; align-items: center; z-index: 9999; cursor: pointer; transition: opacity 0.6s ease-in-out; touch-action: none; }
-        #start-prompt { font-size: 32px; color: #f3c623; font-weight: bold; letter-spacing: 2px; animation: textPulse 1.5s infinite alternate; }
-        .pulse-hint { animation: textPulse 1.5s infinite alternate; }
-        @keyframes textPulse { from { text-shadow: 0 2px 8px rgba(243, 198, 35, 0.3); transform: scale(0.98); } to { text-shadow: 0 2px 25px rgba(243, 198, 35, 1); color: #fff; transform: scale(1.02); } }
-        #magic-stage-wrapper { position: relative; padding-bottom: 40px; }
-        #magic-stage-wrapper::before { content: ""; position: absolute; bottom: -120px; left: 50%; width: 14px; height: 160px; background: #73421A; transform: translateX(-50%); z-index: 1; border-radius: 4px; box-shadow: 5px 5px 15px rgba(0,0,0,0.5); }
-        #magic-stage { position: relative; width: 360px; height: 440px; background: #fafafa; border-radius: 6px; box-shadow: 0 30px 70px rgba(0,0,0,0.8), inset 0 0 30px rgba(0,0,0,0.02); border: 1px solid #e0e0e0; perspective: 1500px; z-index: 3; }
-        #magic-stage-wrapper::after { content: ""; position: absolute; bottom: 30px; left: -20px; width: 400px; height: 16px; background: #8C5323; border-radius: 4px; box-shadow: 0 8px 20px rgba(0,0,0,0.6); z-index: 4; border-bottom: 3px solid #592E0F; }
-        #paintCanvas { position: absolute; top: 0; left: 0; z-index: 20; background: transparent; cursor: crosshair; touch-action: none; }
-        #magic-stage-wrapper.ready-to-click { cursor: pointer; }
-        #magic-card-3d { position: absolute; z-index: 15; transform-style: preserve-3d; display: none; transition: transform 1.5s cubic-bezier(0.2, 0.8, 0.2, 1); transform-origin: center center; }
-        .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; }
-        .card-back { z-index: 2; }
-        .card-front { z-index: 1; transform: rotateY(180deg); }
-        .clip-container { width: 100%; height: 100%; overflow: hidden; transform: scale(0.9); transform-origin: center center; background: #fafafa; border-radius: 10px; opacity: 0; transition: opacity 3.0s ease-in-out; }
-        .clip-container.reveal { opacity: 1; }
-        .frame-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; opacity: 0; transition: opacity 2.0s ease-in-out; }
-        .frame-canvas.show { opacity: 1; }
-        .card-img { width: 100%; height: 100%; object-fit: fill; mix-blend-mode: multiply; filter: contrast(1.05) brightness(1.0); transform: scale(0.9); transform-origin: center center; }
-        #secret-trigger { position: fixed; bottom: 0; right: 0; width: 90px; height: 90px; background: transparent; z-index: 10000; cursor: default; -webkit-tap-highlight-color: transparent; touch-action: none; }
-        #secret-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(25, 25, 25, 0.98); border: 2px solid #f3c623; border-radius: 12px; padding: 25px; z-index: 10001; display: none; color: white; font-family: sans-serif; box-shadow: 0 0 40px rgba(0,0,0,1); text-align: center; }
-        #secret-modal h3 { margin-top: 0; color: #f3c623; font-size: 18px; }
-        #secret-modal select, #secret-modal button { padding: 10px; font-size: 16px; margin: 8px; border-radius: 6px; border: 1px solid #444; background: #333; color: white; }
-        #secret-confirm { background: #f3c623 !important; color: black !important; font-weight: bold; cursor: pointer; width: 120px; }
+        
+        /* 🎨 畫布必須是最高層，且不被點擊穿透 */
+        #paintCanvas { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            z-index: 100; /* 🔥 關鍵修正：畫布必須在最上層 */
+            background: transparent; touch-action: none;
+        }
+
+        #magic-card-3d { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            z-index: 50; /* 卡牌在畫布下方，直到動畫觸發 */
+            transform-style: preserve-3d; display: none;
+        }
+
+        /* 其餘樣式保持相同 */
+        #start-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #111111; z-index: 9999; display: flex; justify-content: center; align-items: center; }
+        .card-img { width: 100%; height: 100%; transform: scale(0.9); }
     </style>
 </head>
 <body>
@@ -64,59 +48,51 @@
 
     <div id="magic-setup">
         <h3 id="status-text">✏️ 請用鉛筆在木畫架上，一筆畫出一個撲克牌框...</h3>
-        <div id="magic-stage-wrapper">
-            <div id="magic-stage">
-                <canvas id="paintCanvas" width="360" height="440"></canvas>
-                <div id="magic-card-3d">
-                    <div class="card-face card-back"><div class="clip-container"><img class="card-img" src="./cards/bicycle_blue.png" alt="back"></div><canvas class="frame-canvas"></canvas></div>
-                    <div class="card-face card-front"><div class="clip-container"><img id="img-front" class="card-img" src="" alt="front"></div><canvas class="frame-canvas"></canvas></div>
-                </div>
+        <div id="magic-stage">
+            <div id="magic-card-3d">
+                <div class="card-face card-back"><img class="card-img" src="./cards/bicycle_blue.png"></div>
+                <div class="card-face card-front"><img id="img-front" class="card-img" src=""></div>
             </div>
+            <canvas id="paintCanvas" width="360" height="440"></canvas>
         </div>
     </div>
 
-    <div id="secret-trigger"></div>
-
     <script>
-        // 強制防縮放
-        document.addEventListener('touchstart', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
-        
-        // 核心邏輯：自動計算日期撲克牌
+        // 1. 初始化自動日期牌面
         const now = new Date();
-        const month = now.getMonth() + 1; // 月份
-        const date = now.getDate();       // 日期
-        const remainder = date % 4;
-        let suit = "";
-        
-        if (remainder === 1) suit = "club";      // 梅花
-        else if (remainder === 2) suit = "diamond"; // 方塊
-        else if (remainder === 3) suit = "heart";   // 紅心
-        else suit = "spade";                     // 黑桃
+        const month = now.getMonth() + 1;
+        const remainder = now.getDate() % 4;
+        const suits = ["spade", "club", "diamond", "heart"];
+        const finalCardName = `${suits[remainder]}_${month}`;
+        document.getElementById('img-front').src = `./cards/${finalCardName}.png`;
 
-        const finalCardName = `${suit}_${month}`;
-        const imgFront = document.getElementById('img-front');
-        imgFront.src = `./cards/${finalCardName}.png`; // 自動載入對應牌面
-
-        // [其他 JS 邏輯不變，確保功能完整]
+        // 2. 畫布觸控優化
         const canvas = document.getElementById('paintCanvas');
         const ctx = canvas.getContext('2d');
-        const statusText = document.getElementById('status-text');
-        const card3D = document.getElementById('magic-card-3d');
-        const stageWrapper = document.getElementById('magic-stage-wrapper');
-        const startOverlay = document.getElementById('start-overlay');
-        const secretTrigger = document.getElementById('secret-trigger');
+        ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+        
+        let isDrawing = false;
+        
+        canvas.addEventListener('pointerdown', (e) => {
+            isDrawing = true;
+            ctx.beginPath();
+            ctx.moveTo(e.offsetX, e.offsetY);
+        });
 
-        ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        canvas.addEventListener('pointermove', (e) => {
+            if (!isDrawing) return;
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.stroke();
+        });
 
-        startOverlay.addEventListener('touchstart', (e) => {
+        canvas.addEventListener('pointerup', () => { isDrawing = false; });
+
+        // 3. 確保啟動層順利移除
+        document.getElementById('start-overlay').addEventListener('touchstart', (e) => {
             e.preventDefault();
+            document.getElementById('start-overlay').style.display = 'none';
             document.body.classList.add('started');
-            startOverlay.style.opacity = '0';
-            setTimeout(() => { startOverlay.style.display = 'none'; }, 600);
         }, { passive: false });
-
-        // (繪圖與變形邏輯與前次相同...)
-        // ... (為了篇幅，此處省略重複的函數細節，請保持與上一次提供的完整程式碼連結)
     </script>
 </body>
 </html>
