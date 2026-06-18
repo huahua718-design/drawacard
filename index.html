@@ -54,14 +54,13 @@
         .card-back { z-index: 2; }
         .card-front { z-index: 1; transform: rotateY(180deg); }
         
-        /* 🎨 移除了 scale(0.9)，讓牌面圖案填滿你手繪的框 */
         .clip-container { width: 100%; height: 100%; overflow: hidden; background: #fafafa; border-radius: 10px; opacity: 0; transition: opacity 3.0s ease-in-out; }
         .clip-container.reveal { opacity: 1; }
         
-        /* 🎨 移除了 opacity 動畫，讓手繪框直接顯示無縫接軌！ */
         .frame-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
         
-        .card-img { width: 100%; height: 100%; object-fit: fill; mix-blend-mode: multiply; filter: contrast(1.05) brightness(1.0); }
+        /* 🎨 這裡將撲克牌圖片縮小至 90%，留出白色邊距 */
+        .card-img { width: 100%; height: 100%; object-fit: fill; mix-blend-mode: multiply; filter: contrast(1.05) brightness(1.0); transform: scale(0.9); transform-origin: center center; }
 
         #action-buttons { margin-top: 35px; display: flex; gap: 30px; justify-content: center; z-index: 10; opacity: 0; }
         body.started #action-buttons { animation: fadeInText 0.5s ease 3.8s forwards; }
