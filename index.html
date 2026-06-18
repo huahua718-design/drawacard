@@ -49,7 +49,7 @@
         #paintCanvas { position: absolute; top: 0; left: 0; z-index: 20; background: transparent; cursor: crosshair; touch-action: none; }
         #magic-stage-wrapper.ready-to-click { cursor: pointer; }
         
-        #magic-card-3d { position: absolute; z-index: 15; transform-style: preserve-3d; display: none; transition: transform 1.5s cubic-bezier(0.2, 0.8, 0.2, 1); transform-origin: center center; }
+        #magic-card-3d { position: absolute; z-index: 30; transform-style: preserve-3d; display: none; transition: transform 1.5s cubic-bezier(0.2, 0.8, 0.2, 1); transform-origin: center center; }
         .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; }
         .card-back { z-index: 2; }
         .card-front { z-index: 1; transform: rotateY(180deg); }
@@ -59,6 +59,7 @@
         
         .frame-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
         
+        /* 🎨 縮小至 80%，讓白邊更明顯 */
         .card-img { width: 100%; height: 100%; object-fit: fill; mix-blend-mode: multiply; filter: contrast(1.05) brightness(1.0); transform: scale(0.8); transform-origin: center center; }
 
         #action-buttons { margin-top: 35px; display: flex; gap: 30px; justify-content: center; z-index: 10; opacity: 0; }
@@ -66,7 +67,9 @@
         .action-btn { padding: 12px 28px; font-size: 20px; border-radius: 8px; border: 2px solid #8C5323; background: #fafafa; color: #592E0F; cursor: pointer; font-weight: bold; box-shadow: 0 6px 12px rgba(0,0,0,0.6); transition: transform 0.1s; font-family: sans-serif; }
         .action-btn.primary { background: #f3c623; border-color: #d4a700; color: #111; }
         .action-btn:active { transform: scale(0.95); }
-        #btn-retry { display: none; background: #ff4757; color: white; border: none; }
+
+        /* Try Again 按鈕動態外觀 */
+        #btn-again { display: none; background: #f3c623; border-color: #d4a700; color: #111; margin-top: 35px; z-index: 10; }
         
         #secret-trigger { position: fixed; bottom: 0; right: 0; width: 90px; height: 90px; z-index: 10000; -webkit-tap-highlight-color: transparent;}
         #secret-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(25, 25, 25, 0.98); border: 2px solid #f3c623; border-radius: 12px; padding: 25px; z-index: 10001; display: none; color: white; text-align: center; }
@@ -95,95 +98,170 @@
         <div id="action-buttons">
             <button id="btn-clear" class="action-btn">Clear</button>
             <button id="btn-next" class="action-btn primary">Next</button>
-            <button id="btn-retry" class="action-btn">Retry</button>
         </div>
+        <button id="btn-again" class="action-btn primary">Try Again</button>
     </div>
 
     <div id="secret-trigger"></div>
     <div id="secret-modal">
         <h3>🧙‍♂️ Mind Control: Set Target</h3>
         <div style="margin: 15px 0;">
-            <select id="secret-suit"><option value="spade">Spades ♠</option><option value="heart">Hearts ♥</option><option value="club">Clubs ♣</option><option value="diamond">Diamonds ♦</option></select>
-            <select id="secret-value"><option value="1">A</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="jack">J</option><option value="queen">Q</option><option value="king">K</option></select>
+            <select id="secret-suit">
+                <option value="heart">Hearts ♥</option>
+                <option value="spade">Spades ♠</option>
+                <option value="diamond">Diamonds ♦</option>
+                <option value="club">Clubs ♣</option>
+            </select>
+            <select id="secret-value">
+                <option value="1">A</option><option value="2">2</option><option value="3">3</option>
+                <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+                <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+                <option value="10">10</option><option value="jack">J</option><option value="queen">Q</option><option value="king">K</option>
+            </select>
         </div>
         <button id="secret-confirm">Inject Magic</button>
     </div>
 
     <script>
+        document.addEventListener('touchstart', (e) => { 
+            if (e.touches.length > 1) e.preventDefault(); 
+        }, { passive: false });
+
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(event) {
+            const nowTime = Date.now();
+            if (nowTime - lastTouchEnd <= 300) {
+                if (!event.target.closest('#secret-modal') && event.target.id !== 'paintCanvas' && !event.target.classList.contains('action-btn')) {
+                    event.preventDefault(); 
+                }
+            }
+            lastTouchEnd = nowTime;
+        }, { passive: false });
+        
+        // 🔮 依據指定規則排列的花色陣列：紅心 -> 黑桃 -> 方塊 -> 梅花
+        const suitOrder = ["heart", "spade", "diamond", "club"];
+        
+        // 初始根據日期時間設定卡片
+        const now = new Date();
+        const initialMonth = now.getMonth() + 1; 
+        const date = now.getDate();       
+        const remainder = date % 4;
+        
+        // 對應原本預設初始花色邏輯
+        let currentSuit = (remainder === 1) ? "club" : (remainder === 2) ? "diamond" : (remainder === 3) ? "heart" : "spade";
+        let currentValString = initialMonth.toString(); // 原本為 '1'~'12'，JQK 分別為 'jack','queen','king'
+        
+        const imgFront = document.getElementById('img-front');
+        
+        // 輔助函式：將字串或數字轉成檔案名稱所需格式
+        function getCardValueName(val) {
+            if (val === 1 || val === '1') return '1';
+            if (val === 11 || val === 'jack') return 'jack';
+            if (val === 12 || val === 'queen') return 'queen';
+            if (val === 13 || val === 'king') return 'king';
+            return val.toString();
+        }
+        
+        // 輔助函式：將目前的數值名稱轉成純數字方便加算
+        function getCardValueNumber(valName) {
+            if (valName === 'jack') return 11;
+            if (valName === 'queen') return 12;
+            if (valName === 'king') return 13;
+            return parseInt(valName, 10);
+        }
+
+        function syncFrontImage() {
+            imgFront.src = `./cards/${currentSuit}_${getCardValueName(currentValString)}.png`; 
+        }
+        
+        // 初始化第一次卡片
+        syncFrontImage();
+        
         const canvas = document.getElementById('paintCanvas');
         const ctx = canvas.getContext('2d');
         const statusText = document.getElementById('status-text');
-        const card3D = document.getElementById('magic-card-3d');
-        const imgFront = document.getElementById('img-front');
-        const btnRetry = document.getElementById('btn-retry');
-        const btnNext = document.getElementById('btn-next');
+        const startOverlay = document.getElementById('start-overlay');
         const btnClear = document.getElementById('btn-clear');
-        
-        let magicState = -1, isDrawing = false, tracePoints = [], savedCanvasState = null;
-        let currentSuitIndex = 0; // 0:Heart, 1:Spade, 2:Diamond, 3:Club
-        let currentVal = 1; 
-        const suits = ["heart", "spade", "diamond", "club"];
+        const btnNext = document.getElementById('btn-next');
+        const btnAgain = document.getElementById('btn-again');
+        const actionButtons = document.getElementById('action-buttons');
+        const card3D = document.getElementById('magic-card-3d');
+        const stageWrapper = document.getElementById('magic-stage-wrapper');
+        const secretTrigger = document.getElementById('secret-trigger');
+        const secretModal = document.getElementById('secret-modal');
+        const secretConfirm = document.getElementById('secret-confirm');
+        const secretSuit = document.getElementById('secret-suit');
+        const secretValue = document.getElementById('secret-value');
 
-        // 初始化
-        const now = new Date();
-        currentVal = (now.getDate() % 13) + 1;
-        currentSuitIndex = 0;
-        updateCardSrc();
+        ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
 
-        function updateCardSrc() {
-            let val = (currentVal === "jack") ? 11 : (currentVal === "queen") ? 12 : (currentVal === "king") ? 13 : parseInt(currentVal);
-            imgFront.src = `./cards/${suits[currentSuitIndex]}_${val}.png`;
-        }
-
-        function calculateNext() {
-            // 數字 +5 mod 13
-            let val = (currentVal === "jack") ? 11 : (currentVal === "queen") ? 12 : (currentVal === "king") ? 13 : parseInt(currentVal);
-            val = (val + 5);
-            if (val > 13) val -= 13;
-            currentVal = val;
-            // 花色循環
-            currentSuitIndex = (currentSuitIndex + 1) % 4;
-            updateCardSrc();
-        }
-
-        document.getElementById('start-overlay').addEventListener('touchstart', (e) => {
+        startOverlay.addEventListener('touchstart', (e) => {
             e.preventDefault();
             document.body.classList.add('started');
-            document.getElementById('start-overlay').style.display = 'none';
+            startOverlay.style.opacity = '0';
+            setTimeout(() => { startOverlay.style.display = 'none'; }, 600);
         }, { passive: false });
 
+        let magicState = -1;
+        let isDrawing = false;
+        let tracePoints = [];
+        let savedCanvasState = null;
+        let lastTapTime = 0;
+
+        secretTrigger.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const currentTime = Date.now();
+            if (currentTime - lastTapTime < 300 && currentTime - lastTapTime > 0) {
+                secretModal.style.display = 'block';
+                // 讓後門選單同步當前狀態
+                secretSuit.value = currentSuit;
+                secretValue.value = getCardValueName(currentValString);
+            }
+            lastTapTime = currentTime;
+        }, { passive: false });
+
+        secretConfirm.addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentSuit = secretSuit.value;
+            currentValString = secretValue.value;
+            syncFrontImage();
+            secretModal.style.display = 'none';
+        });
+
+        btnClear.addEventListener('click', () => { if (magicState === -1) ctx.clearRect(0, 0, canvas.width, canvas.height); });
+        
         btnNext.addEventListener('click', () => {
             magicState = 0;
             savedCanvasState = ctx.getImageData(0, 0, canvas.width, canvas.height);
             statusText.innerText = "✨ Draw a frame of card";
-            btnNext.style.display = 'none';
-        });
-
-        btnRetry.addEventListener('click', () => {
-            calculateNext();
-            magicState = 0;
-            card3D.style.display = 'none';
-            card3D.style.transform = 'rotateY(0deg)';
-            btnRetry.style.display = 'none';
-            btnNext.style.display = 'inline-block';
-            statusText.innerText = "✨ Draw a new frame";
+            actionButtons.style.display = 'none';
         });
 
         canvas.addEventListener('pointerdown', (e) => {
             if(magicState > 0 && magicState < 4) return;
             isDrawing = true;
             const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            if (magicState === 0) {
+                tracePoints = [];
+                if (savedCanvasState) ctx.putImageData(savedCanvasState, 0, 0);
+            }
             ctx.beginPath();
-            ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
-            if(magicState === 0) tracePoints = [];
+            ctx.moveTo(x, y);
         });
 
         canvas.addEventListener('pointermove', (e) => {
             if (!isDrawing || (magicState > 0 && magicState < 4)) return;
             const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left, y = e.clientY - rect.top;
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
             if (magicState === 0) tracePoints.push({x, y});
-            ctx.lineTo(x, y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
         });
 
         window.addEventListener('pointerup', () => {
@@ -193,26 +271,152 @@
                 magicState = 1;
                 statusText.innerText = "👉 Tap to cast the spell...";
                 statusText.classList.add('pulse-hint');
-                document.getElementById('magic-stage-wrapper').classList.add('ready-to-click');
+                stageWrapper.classList.add('ready-to-click');
             }
         });
 
-        document.getElementById('magic-stage-wrapper').addEventListener('click', (e) => {
-            if(magicState === 1) {
-                magicState = 3;
-                // ... (這裡保留原有的 3D 卡片繪製邏輯)
+        function getSortedCorners(pts) {
+            let tl = pts[0], tr = pts[0], br = pts[0], bl = pts[0];
+            let minSum = Infinity, maxSum = -Infinity, minDiff = Infinity, maxDiff = -Infinity;
+            pts.forEach(p => {
+                let sum = p.x + p.y, diff = p.x - p.y;
+                if (sum < minSum) { minSum = sum; tl = p; }   
+                if (sum > maxSum) { maxSum = sum; br = p; }   
+                if (diff > maxDiff) { maxDiff = diff; tr = p; } 
+                if (diff < minDiff) { minDiff = diff; bl = p; } 
+            });
+            return [tl, tr, br, bl];
+        }
+
+        stageWrapper.addEventListener('click', (e) => {
+            e.stopPropagation();
+
+            if (magicState === 1) {
+                magicState = 3; 
+                statusText.classList.remove('pulse-hint');
+                stageWrapper.classList.remove('ready-to-click'); 
+                statusText.innerText = "⏳ Infusing magic into your drawing...";
+
+                const corners = getSortedCorners(tracePoints);
+                let allXs = tracePoints.map(p => p.x); 
+                let allYs = tracePoints.map(p => p.y);
+                let minX = Math.min(...allXs) - 5; 
+                let maxX = Math.max(...allXs) + 5;
+                let minY = Math.min(...allYs) - 5; 
+                let maxY = Math.max(...allYs) + 5;
+                
+                let boxWidth = maxX - minX; 
+                let boxHeight = maxY - minY;
+                
+                card3D.style.width = `${boxWidth}px`; 
+                card3D.style.height = `${boxHeight}px`;
+                card3D.style.left = `${minX}px`; 
+                card3D.style.top = `${minY}px`;
+                
+                let pct0_x = ((corners[0].x - minX) / boxWidth) * 100; let pct0_y = ((corners[0].y - minY) / boxHeight) * 100;
+                let pct1_x = ((corners[1].x - minX) / boxWidth) * 100; let pct1_y = ((corners[1].y - minY) / boxHeight) * 100;
+                let pct2_x = ((corners[2].x - minX) / boxWidth) * 100; let pct2_y = ((corners[2].y - minY) / boxHeight) * 100;
+                let pct3_x = ((corners[3].x - minX) / boxWidth) * 100; let pct3_y = ((corners[3].y - minY) / boxHeight) * 100;
+                const clipPathString = `polygon(${pct0_x}% ${pct0_y}%, ${pct1_x}% ${pct1_y}%, ${pct2_x}% ${pct2_y}%, ${pct3_x}% ${pct3_y}%)`;
+                
+                const clipContainers = card3D.querySelectorAll('.clip-container');
+                clipContainers.forEach(container => { container.style.clipPath = clipPathString; });
+                
+                const fCanvasBack = card3D.querySelector('.card-back .frame-canvas');
+                const fCanvasFront = card3D.querySelector('.card-front .frame-canvas');
+
+                fCanvasBack.width = boxWidth; fCanvasBack.height = boxHeight;
+                const fCtxBack = fCanvasBack.getContext('2d');
+                fCtxBack.strokeStyle = '#1a1a1a'; fCtxBack.lineWidth = 4; fCtxBack.lineCap = 'round'; fCtxBack.lineJoin = 'round';
+                fCtxBack.beginPath();
+                tracePoints.forEach((p, i) => {
+                    if (i === 0) fCtxBack.moveTo(p.x - minX, p.y - minY);
+                    else fCtxBack.lineTo(p.x - minX, p.y - minY);
+                });
+                fCtxBack.stroke();
+
+                fCanvasFront.width = boxWidth; fCanvasFront.height = boxHeight;
+                const fCtxFront = fCanvasFront.getContext('2d');
+                fCtxFront.translate(boxWidth, 0); 
+                fCtxFront.scale(-1, 1);           
+                fCtxFront.strokeStyle = '#1a1a1a'; fCtxFront.lineWidth = 4; fCtxFront.lineCap = 'round'; fCtxFront.lineJoin = 'round';
+                fCtxFront.beginPath();
+                tracePoints.forEach((p, i) => {
+                    if (i === 0) fCtxFront.moveTo(p.x - minX, p.y - minY);
+                    else fCtxFront.lineTo(p.x - minX, p.y - minY);
+                });
+                fCtxFront.stroke();
+
+                if (savedCanvasState) {
+                    ctx.putImageData(savedCanvasState, 0, 0);
+                }
+
+                card3D.style.zIndex = '30'; 
                 card3D.style.display = 'block';
-                card3D.style.zIndex = '30';
+
+                setTimeout(() => {
+                    statusText.innerText = "🔮 Spatial anomaly detected, forming card back...";
+                    clipContainers.forEach(container => container.classList.add('reveal'));
+                }, 300);
+
                 setTimeout(() => {
                     magicState = 2;
-                    statusText.innerText = "🃏 Tap to reveal!";
-                }, 1500);
-            } else if(magicState === 2) {
-                magicState = 4;
-                card3D.style.transform = 'rotateY(180deg)';
-                statusText.innerText = "✨ Magic Done!";
-                btnRetry.style.display = 'inline-block';
+                    statusText.innerText = "🃏 A miracle is born! Tap to cast the spell...";
+                    statusText.classList.add('pulse-hint');
+                    stageWrapper.classList.add('ready-to-click'); 
+                }, 3500);
             }
+            else if (magicState === 2) {
+                magicState = 3; 
+                statusText.classList.remove('pulse-hint');
+                stageWrapper.classList.remove('ready-to-click');
+                statusText.innerText = "✨ Revealing your magic card...";
+                card3D.style.transform = `rotateY(180deg)`;
+
+                setTimeout(() => {
+                    magicState = 4;
+                    statusText.innerText = "🎨 The magic is complete! Feel free to continue drawing...";
+                    // 魔術表演結束，顯示 Try Again 按鈕
+                    btnAgain.style.display = 'block';
+                }, 1500);
+            }
+        });
+
+        // 🔄 處理重置按鈕點擊，注入下一張升級卡片
+        btnAgain.addEventListener('click', (e) => {
+            e.stopPropagation();
+
+            // 1. 計算下一個數字：原本數值加 5，若大於 13 則減 13
+            let currentNum = getCardValueNumber(currentValString);
+            let nextNum = currentNum + 5;
+            if (nextNum > 13) {
+                nextNum -= 13;
+            }
+            currentValString = getCardValueName(nextNum);
+
+            // 2. 計算下一個花色：紅心 -> 黑桃 -> 方塊 -> 梅花 -> 紅心
+            let currentSuitIdx = suitOrder.indexOf(currentSuit);
+            if (currentSuitIdx === -1) currentSuitIdx = 0; // 防止例外防呆
+            let nextSuitIdx = (currentSuitIdx + 1) % 4;
+            currentSuit = suitOrder[nextSuitIdx];
+
+            // 3. 同步新卡片圖案到前端
+            syncFrontImage();
+
+            // 4. 重置畫布狀態與 3D 物件
+            magicState = -1;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            card3D.style.transform = 'rotateY(0deg)';
+            card3D.style.display = 'none';
+            
+            const clipContainers = card3D.querySelectorAll('.clip-container');
+            clipContainers.forEach(container => container.classList.remove('reveal'));
+
+            // 5. 復原 UI 控制元件
+            btnAgain.style.display = 'none';
+            actionButtons.style.display = 'flex';
+            statusText.innerText = "✏️ Please draw a magician";
         });
     </script>
 </body>
