@@ -2,39 +2,35 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Cardtoon - Magic</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover">
+    <title>Cardtoon</title>
     <style>
-        html, body { touch-action: none; -webkit-text-size-adjust: none; margin: 0; background-color: #333; overflow: hidden; }
-        body { display: flex; flex-direction: column; align-items: center; min-height: 100vh; font-family: sans-serif; color: #fff; }
-
-        /* 畫架容器位置 */
-        #magic-setup { display: flex; flex-direction: column; align-items: center; margin-top: 80px; opacity: 0; transition: opacity 1.5s ease; }
-        body.started #magic-setup { opacity: 1; }
-
-        #status-text { text-align: center; margin-bottom: 20px; color: #f3c623; font-size: 22px; font-weight: bold; height: 30px; }
+        html, body { touch-action: none; -webkit-text-size-adjust: none; overflow: hidden; }
+        body { margin: 0; background-image: url('./image_6.png'); background-size: 80%; background-repeat: no-repeat; background-attachment: fixed; background-color: rgba(0, 0, 0, 0.4); background-blend-mode: multiply; display: flex; flex-direction: column; align-items: center; min-height: 100vh; color: #fff; background-position: -50% center; }
         
-        #magic-stage { position: relative; width: 360px; height: 440px; background: #fafafa; border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        #magic-setup { margin-top: 100px; opacity: 0; }
+        body.started #magic-setup { animation: easelUp 2s cubic-bezier(0.25, 1, 0.5, 1) 1.5s forwards; }
+        @keyframes easelUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        #status-text { text-align: center; margin-bottom: 20px; color: #f3c623; font-size: 22px; font-weight: bold; height: 30px; }
+
+        #magic-stage { position: relative; width: 360px; height: 440px; background: #fafafa; border-radius: 6px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
         #paintCanvas { position: absolute; top: 0; left: 0; z-index: 10; cursor: crosshair; }
         
-        /* 撲克牌容器 */
-        #magic-card-3d { position: absolute; z-index: 20; width: 360px; height: 440px; transform-style: preserve-3d; transition: transform 1.2s; display: none; }
-        .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; background: #fff; border-radius: 10px; }
-        .card-front { transform: rotateY(180deg); display: flex; justify-content: center; align-items: center; }
-        .card-img { width: 90%; height: 90%; object-fit: contain; }
+        #magic-card-3d { position: absolute; z-index: 20; width: 100%; height: 100%; transform-style: preserve-3d; display: none; transition: transform 1s ease-in-out; }
+        .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; background: white; border-radius: 10px; }
+        .card-front { transform: rotateY(180deg); }
+        .card-img { width: 100%; height: 100%; object-fit: contain; }
 
-        #action-buttons { margin-top: 30px; display: flex; gap: 20px; }
-        .action-btn { padding: 10px 25px; font-size: 18px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; }
-        .primary { background: #f3c623; }
-
-        #start-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #111; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
+        #action-buttons { margin-top: 35px; display: flex; gap: 20px; }
+        .action-btn { padding: 12px 30px; font-size: 18px; border-radius: 8px; border: none; background: #f3c623; color: #333; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div id="start-overlay">
-        <div style="font-size: 32px; color: #f3c623;">Draw a Magician</div>
-        <div style="margin-top: 10px;">Tap to Start</div>
+    <div id="start-overlay" style="position:fixed; width:100%; height:100%; background:#000; z-index:999; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+        <div style="font-size:32px; color:#f3c623; margin-bottom:10px;">Draw a Magician</div>
+        <div style="color:#888;">Tap to Start</div>
     </div>
 
     <div id="magic-setup">
@@ -42,17 +38,13 @@
         <div id="magic-stage">
             <canvas id="paintCanvas" width="360" height="440"></canvas>
             <div id="magic-card-3d">
-                <div class="card-face card-back" style="background: #000; display:flex; justify-content:center; align-items:center;">
-                    <span style="color:white; font-size:20px;">?</span>
-                </div>
-                <div class="card-face card-front">
-                    <img id="img-front" class="card-img" src="" alt="card">
-                </div>
+                <div class="card-face card-back"><img class="card-img" src="./cards/bicycle_blue.png"></div>
+                <div class="card-face card-front"><img id="img-front" class="card-img" src=""></div>
             </div>
         </div>
         <div id="action-buttons">
             <button id="btn-clear" class="action-btn">Clear</button>
-            <button id="btn-next" class="action-btn primary">Next</button>
+            <button id="btn-next" class="action-btn">Next</button>
         </div>
     </div>
 
@@ -61,20 +53,37 @@
         const ctx = canvas.getContext('2d');
         const statusText = document.getElementById('status-text');
         const card3D = document.getElementById('magic-card-3d');
-        const imgFront = document.getElementById('img-front');
-        
-        // 設定今日撲克牌 (請確保您的 cards 資料夾中有對應圖片)
-        const now = new Date();
-        const finalCardName = `spade_1`; // 預設測試圖，請改回您的動態邏輯
-        imgFront.src = `./cards/${finalCardName}.png`;
-
-        let magicState = -1;
-        ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
+        let magicState = -1, isDrawing = false, tracePoints = [];
 
         document.getElementById('start-overlay').addEventListener('touchstart', (e) => {
-            e.preventDefault();
             document.body.classList.add('started');
-            document.getElementById('start-overlay').style.display = 'none';
+            e.target.style.display = 'none';
+        });
+
+        // 設定日期對應卡片
+        const d = new Date();
+        document.getElementById('img-front').src = `./cards/spade_${(d.getDate()%13)+1}.png`;
+
+        canvas.addEventListener('pointerdown', (e) => {
+            if(magicState > 0 && magicState < 4) return;
+            isDrawing = true;
+            ctx.beginPath();
+        });
+
+        canvas.addEventListener('pointermove', (e) => {
+            if (!isDrawing) return;
+            const r = canvas.getBoundingClientRect();
+            const x = e.clientX - r.left, y = e.clientY - r.top;
+            if(magicState === 0) tracePoints.push({x,y});
+            ctx.lineTo(x, y); ctx.stroke();
+        });
+
+        window.addEventListener('pointerup', () => { 
+            isDrawing = false;
+            if (magicState === 0 && tracePoints.length > 20) {
+                magicState = 1;
+                statusText.innerText = "Tap to cast the spell...";
+            }
         });
 
         document.getElementById('btn-next').addEventListener('click', () => {
@@ -83,36 +92,20 @@
             document.getElementById('action-buttons').style.display = 'none';
         });
 
-        // 繪圖邏輯
-        let drawing = false;
-        canvas.addEventListener('pointerdown', () => drawing = true);
-        canvas.addEventListener('pointermove', (e) => {
-            if(!drawing) return;
-            const rect = canvas.getBoundingClientRect();
-            ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
-            ctx.stroke();
-        });
-        canvas.addEventListener('pointerup', () => {
-            drawing = false;
-            ctx.beginPath();
-            if(magicState === 0) {
-                magicState = 1;
-                statusText.innerText = "Tap to cast the spell....";
-                canvas.style.pointerEvents = 'none';
+        document.getElementById('magic-stage').addEventListener('click', () => {
+            if (magicState === 1) {
+                magicState = 3;
+                card3D.style.display = 'block';
+                statusText.innerText = "Revealing...";
+                setTimeout(() => {
+                    card3D.style.transform = "rotateY(180deg)";
+                    magicState = 4;
+                    setTimeout(() => statusText.innerText = "Magic complete!", 1000);
+                }, 1000);
             }
         });
 
-        document.getElementById('magic-stage').addEventListener('click', () => {
-            if(magicState === 1) {
-                card3D.style.display = 'block';
-                magicState = 2;
-                statusText.innerText = "Tap to flip the card";
-            } else if(magicState === 2) {
-                card3D.style.transform = "rotateY(180deg)";
-                magicState = 4; // 解鎖作畫
-                statusText.innerText = "Magic complete!";
-            }
-        });
+        document.getElementById('btn-clear').addEventListener('click', () => ctx.clearRect(0,0,360,440));
     </script>
 </body>
 </html>
