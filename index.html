@@ -62,7 +62,7 @@
         
         .card-img { width: 100%; height: 100%; object-fit: fill; mix-blend-mode: multiply; filter: contrast(1.05) brightness(1.0); transform: scale(0.9); transform-origin: center center; }
 
-        /* 🎨 新增的按鈕樣式 */
+        /* 🎨 按鈕樣式 */
         #action-buttons { margin-top: 140px; display: flex; gap: 30px; z-index: 10; opacity: 0; }
         body.started #action-buttons { animation: fadeInText 0.5s ease 3.6s forwards; }
         .action-btn { padding: 12px 28px; font-size: 20px; border-radius: 8px; border: 2px solid #8C5323; background: #fafafa; color: #592E0F; cursor: pointer; font-weight: bold; box-shadow: 0 6px 12px rgba(0,0,0,0.6); transition: transform 0.1s; font-family: sans-serif; }
@@ -156,7 +156,6 @@
         const secretSuit = document.getElementById('secret-suit');
         const secretValue = document.getElementById('secret-value');
         
-        // 按鈕元素
         const btnClear = document.getElementById('btn-clear');
         const btnNext = document.getElementById('btn-next');
         const actionButtons = document.getElementById('action-buttons');
@@ -173,10 +172,10 @@
         let magicState = -1; 
         let isDrawing = false;
         let tracePoints = []; 
+        let savedCanvasState = null; // 📸 儲存畫布快照變數
 
         let lastTapTime = 0;
 
-        // 🤫 移除了長按機制，只保留雙擊叫出設定面板，讓魔術師可以秘密設定牌
         secretTrigger.addEventListener('touchstart', (e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -195,7 +194,6 @@
             secretModal.style.display = 'none';
         });
 
-        // 🖌️ 按鈕邏輯
         btnClear.addEventListener('click', (e) => {
             e.stopPropagation();
             if (magicState === -1) {
@@ -206,13 +204,14 @@
         btnNext.addEventListener('click', (e) => {
             e.stopPropagation();
             if (magicState === -1) {
-                magicState = 0; // 進入撲克牌框繪製模式
+                magicState = 0; 
+                // 📸 進入畫框模式前，立刻拍下畫布（魔術師塗鴉）的快照
+                savedCanvasState = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 statusText.innerText = "✨ 請一筆畫畫出一張撲克牌框...";
-                actionButtons.style.display = 'none'; // 隱藏按鈕，保持版面簡潔
+                actionButtons.style.display = 'none'; 
             }
         });
 
-        // 🎨 畫布邏輯
         canvas.addEventListener('pointerdown', (e) => { 
             if(magicState > 0) return; 
             isDrawing = true; 
@@ -223,6 +222,10 @@
 
             if (magicState === 0) {
                 tracePoints = []; 
+                // 🔄 每次下筆畫新框時，還原快照（清除上一個畫壞的框，保留魔術師）
+                if (savedCanvasState) {
+                    ctx.putImageData(savedCanvasState, 0, 0);
+                }
             }
 
             ctx.beginPath();
@@ -249,7 +252,6 @@
             if (!isDrawing) return;
             isDrawing = false; 
             
-            // 畫完框之後，提示文字更新
             if (magicState === 0 && tracePoints.length > 10) {
                 magicState = 1;
                 statusText.innerText = "👉 畫得很好！現在請用手指「點擊畫布施展魔法」...";
@@ -305,16 +307,31 @@
                 const clipContainers = card3D.querySelectorAll('.clip-container');
                 clipContainers.forEach(container => { container.style.clipPath = clipPathString; });
                 
-                const frameCanvases = card3D.querySelectorAll('.frame-canvas');
-                frameCanvases.forEach(fCanvas => {
-                    fCanvas.width = boxWidth; fCanvas.height = boxHeight;
-                    const fCtx = fCanvas.getContext('2d');
-                    fCtx.drawImage(canvas, minX, minY, boxWidth, boxHeight, 0, 0, boxWidth, boxHeight);
-                });
+                // 🎨 分別處理牌背與牌正面的 Canvas
+                const fCanvasBack = card3D.querySelector('.card-back .frame-canvas');
+                const fCanvasFront = card3D.querySelector('.card-front .frame-canvas');
+
+                // 1. 牌背：正常繪製
+                fCanvasBack.width = boxWidth; fCanvasBack.height = boxHeight;
+                const fCtxBack = fCanvasBack.getContext('2d');
+                fCtxBack.drawImage(canvas, minX, minY, boxWidth, boxHeight, 0, 0, boxWidth, boxHeight);
+
+                // 2. 牌面：水平鏡像繪製
+                fCanvasFront.width = boxWidth; fCanvasFront.height = boxHeight;
+                const fCtxFront = fCanvasFront.getContext('2d');
+                fCtxFront.translate(boxWidth, 0); // 將原點移到右側
+                fCtxFront.scale(-1, 1);           // 水平翻轉
+                fCtxFront.drawImage(canvas, minX, minY, boxWidth, boxHeight, 0, 0, boxWidth, boxHeight);
+
+                // 🪄 最後一步：將主畫布還原為快照，拔除畫布上的撲克牌框！
+                if (savedCanvasState) {
+                    ctx.putImageData(savedCanvasState, 0, 0);
+                }
 
                 card3D.style.zIndex = '30'; 
                 card3D.style.display = 'block';
-                frameCanvases.forEach(fCanvas => fCanvas.classList.add('show'));
+                fCanvasBack.classList.add('show');
+                fCanvasFront.classList.add('show');
 
                 setTimeout(() => {
                     statusText.innerText = "🔮 偵測到時空波動，牌背正在凝聚...";
