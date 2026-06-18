@@ -29,7 +29,6 @@
         body.started #status-text { animation: fadeInText 0.5s ease 3.6s forwards; }
         @keyframes fadeInText { to { opacity: 1; } }
 
-        /* 📱 手機版面微調 */
         @media (max-width: 500px) and (orientation: portrait) {
             body { background-size: 110%; }
             body.started { animation: stickmanEnterMobile 3.0s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
@@ -48,7 +47,6 @@
         #magic-stage { position: relative; width: 360px; height: 440px; background: #fafafa; border-radius: 6px; box-shadow: 0 30px 70px rgba(0,0,0,0.8), inset 0 0 30px rgba(0,0,0,0.02); border: 1px solid #e0e0e0; perspective: 1500px; z-index: 3; }
         #magic-stage-wrapper::after { content: ""; position: absolute; bottom: 30px; left: -20px; width: 400px; height: 16px; background: #8C5323; border-radius: 4px; box-shadow: 0 8px 20px rgba(0,0,0,0.6); z-index: 4; border-bottom: 3px solid #592E0F; }
 
-        /* 🔒 關鍵：讓畫布專注於接收繪圖觸控，不受全域攔截影響 */
         #paintCanvas { position: absolute; top: 0; left: 0; z-index: 20; background: transparent; cursor: crosshair; touch-action: none; }
         #magic-stage-wrapper.ready-to-click { cursor: pointer; }
         
@@ -61,10 +59,9 @@
         .frame-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; opacity: 0; transition: opacity 2.0s ease-in-out; }
         .frame-canvas.show { opacity: 1; }
         
-        /* 卡牌縮小 90% 避免邊緣被筆跡蓋住 */
         .card-img { width: 100%; height: 100%; object-fit: fill; mix-blend-mode: multiply; filter: contrast(1.05) brightness(1.0); transform: scale(0.9); transform-origin: center center; }
         
-        #secret-trigger { position: fixed; bottom: 0; right: 0; width: 90px; height: 90px; background: transparent; z-index: 10000; cursor: default; -webkit-tap-highlight-color: transparent; touch-action: none; }
+        #secret-trigger { position: fixed; bottom: 0; right: 0; width: 90px; height: 90px; background: transparent; z-index: 10000; cursor: default; -webkit-tap-highlight-color: transparent; touch-action: none; transition: background 0.3s; }
         #secret-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(25, 25, 25, 0.98); border: 2px solid #f3c623; border-radius: 12px; padding: 25px; z-index: 10001; display: none; color: white; font-family: sans-serif; box-shadow: 0 0 40px rgba(0,0,0,1); text-align: center; }
         #secret-modal h3 { margin-top: 0; color: #f3c623; font-size: 18px; }
         #secret-modal select, #secret-modal button { padding: 10px; font-size: 16px; margin: 8px; border-radius: 6px; border: 1px solid #444; background: #333; color: white; }
@@ -76,7 +73,7 @@
     <div id="start-overlay"><div id="start-prompt">Tap to Start.</div></div>
 
     <div id="magic-setup">
-        <h3 id="status-text">✏️ 請用鉛筆在木畫架上，一筆畫出一個撲克牌框...</h3>
+        <h3 id="status-text">✏️ 請隨意在木畫架上塗鴉作畫...</h3>
         <div id="magic-stage-wrapper">
             <div id="magic-stage">
                 <canvas id="paintCanvas" width="360" height="440"></canvas>
@@ -109,12 +106,10 @@
     </div>
 
     <script>
-        // 🔒 全域雙指縮放防護 (僅限多點觸控)
         document.addEventListener('touchstart', (e) => { 
             if (e.touches.length > 1) e.preventDefault(); 
         }, { passive: false });
 
-        // 🔒 阻擋雙擊放大 (避開 secret-modal 以免按鈕失效)
         let lastTouchEnd = 0;
         document.addEventListener('touchend', function(event) {
             const now = Date.now();
@@ -126,16 +121,16 @@
             lastTouchEnd = now;
         }, { passive: false });
         
-        // 🔮 核心邏輯：自動計算日期對應撲克牌
+        // 🔮 日期自動運算
         const now = new Date();
-        const month = now.getMonth() + 1; // 數字 = 當日月份
-        const date = now.getDate();       // 花色 = 當日日期除以四的餘數
+        const month = now.getMonth() + 1; 
+        const date = now.getDate();       
         const remainder = date % 4;
         let suit = (remainder === 1) ? "club" : (remainder === 2) ? "diamond" : (remainder === 3) ? "heart" : "spade";
         
-        let finalCardName = `${suit}_${month}`; // 例如: diamond_6
+        let finalCardName = `${suit}_${month}`;
         const imgFront = document.getElementById('img-front');
-        imgFront.src = `./cards/${finalCardName}.png`; // 自動載入對應牌面
+        imgFront.src = `./cards/${finalCardName}.png`; 
 
         const canvas = document.getElementById('paintCanvas');
         const ctx = canvas.getContext('2d');
@@ -151,7 +146,6 @@
 
         ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
 
-        // 🎬 點擊 Tap to Start 開場
         startOverlay.addEventListener('touchstart', (e) => {
             e.preventDefault();
             document.body.classList.add('started');
@@ -159,19 +153,44 @@
             setTimeout(() => { startOverlay.style.display = 'none'; }, 600);
         }, { passive: false });
 
-        // 🧙‍♂️ 魔術師極速雙擊觸發器
+        let magicState = -1; 
+        let isDrawing = false;
+        let tracePoints = []; 
+        let savedCanvasState = null; // 📸 用來儲存觀眾原始塗鴉的快照
+
         let lastTapTime = 0;
+        let pressTimer;
+
         secretTrigger.addEventListener('touchstart', (e) => {
             e.preventDefault();
             e.stopPropagation();
             const currentTime = Date.now();
+            
             if (currentTime - lastTapTime < 300 && currentTime - lastTapTime > 0) {
                 secretModal.style.display = 'block';
             }
             lastTapTime = currentTime;
+
+            // 長按 1 秒開啟「魔術畫框模式」
+            pressTimer = setTimeout(() => {
+                if (magicState === -1) {
+                    magicState = 0; 
+                    
+                    // 📸 關鍵：拍下目前畫布的塗鴉快照！不清除畫面！
+                    savedCanvasState = ctx.getImageData(0, 0, canvas.width, canvas.height); 
+                    
+                    statusText.innerText = "✨ 魔術時刻：請在空白處一筆畫出「撲克牌方框」...";
+                    
+                    secretTrigger.style.backgroundColor = "rgba(243, 198, 35, 0.4)";
+                    setTimeout(() => secretTrigger.style.backgroundColor = "transparent", 300);
+                }
+            }, 1000);
+
         }, { passive: false });
 
-        // 手動覆寫設定
+        secretTrigger.addEventListener('touchend', () => clearTimeout(pressTimer));
+        secretTrigger.addEventListener('touchcancel', () => clearTimeout(pressTimer));
+
         secretConfirm.addEventListener('click', (e) => {
             e.stopPropagation();
             finalCardName = `${secretSuit.value}_${secretValue.value}`;
@@ -179,30 +198,47 @@
             secretModal.style.display = 'none';
         });
 
-        // 🎨 繪畫引擎
-        let isDrawing = false;
-        let tracePoints = []; 
-        let magicState = 0;
-
         canvas.addEventListener('pointerdown', (e) => { 
-            if(magicState !== 0) return;
-            isDrawing = true; tracePoints = []; 
-            ctx.clearRect(0, 0, canvas.width, canvas.height); 
-        });
-
-        canvas.addEventListener('pointermove', (e) => {
-            if (!isDrawing || magicState !== 0) return;
+            if(magicState > 0) return; 
+            isDrawing = true; 
+            
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
-            tracePoints.push({x, y});
-            ctx.lineTo(x, y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y);
+
+            if (magicState === 0) {
+                tracePoints = []; 
+                // 每次畫新框之前，先把畫面「還原」回剛剛的快照。這樣如果畫錯重畫，也不會覆蓋掉觀眾原本的塗鴉
+                if (savedCanvasState) {
+                    ctx.putImageData(savedCanvasState, 0, 0); 
+                }
+            }
+
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        });
+
+        canvas.addEventListener('pointermove', (e) => {
+            if (!isDrawing || magicState > 0) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if (magicState === 0) {
+                tracePoints.push({x, y}); 
+            }
+
+            ctx.lineTo(x, y); 
+            ctx.stroke(); 
+            ctx.beginPath(); 
+            ctx.moveTo(x, y);
         });
 
         window.addEventListener('pointerup', () => { 
             if (!isDrawing) return;
             isDrawing = false; 
-            if (tracePoints.length > 10) {
+            
+            if (magicState === 0 && tracePoints.length > 10) {
                 magicState = 1;
                 statusText.innerText = "👉 畫得很好！現在請用手指「點擊畫布施展魔法」...";
                 statusText.classList.add('pulse-hint');
@@ -210,7 +246,6 @@
             }
         });
 
-        // 找出四個頂點
         function getSortedCorners(pts) {
             let tl = pts[0], tr = pts[0], br = pts[0], bl = pts[0];
             let minSum = Infinity, maxSum = -Infinity, minDiff = Infinity, maxDiff = -Infinity;
@@ -224,7 +259,6 @@
             return [tl, tr, br, bl];
         }
 
-        // 🪄 點擊互動與魔法變形
         stageWrapper.addEventListener('click', (e) => {
             e.stopPropagation();
 
@@ -266,7 +300,13 @@
                     fCtx.drawImage(canvas, minX, minY, boxWidth, boxHeight, 0, 0, boxWidth, boxHeight);
                 });
 
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                // 🪄 這裡是最關鍵的變更：把畫布還原回只有「塗鴉」的狀態，拔掉剛剛畫的「方框」！
+                if (savedCanvasState) {
+                    ctx.putImageData(savedCanvasState, 0, 0);
+                } else {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+                
                 card3D.style.display = 'block';
                 frameCanvases.forEach(fCanvas => fCanvas.classList.add('show'));
 
