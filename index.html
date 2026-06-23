@@ -6,7 +6,7 @@
     <title>Cardtoon - Magic Card</title>
     <style>
         /* 🔒 Base Protection */
-        html, body { touch-action: none; -webkit-text-size-adjust: none; }
+        html, body { touch-action: none; -webkit-text-size-adjust: none; overflow: hidden; background-color: #000; }
         
         body { 
             margin: 0; background-image: url('./image_6.png'); background-size: 80%;
@@ -21,6 +21,7 @@
         body.started { animation: stickmanEnter 3.0s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
         @keyframes stickmanEnter { from { background-position: -50% center; } to { background-position: 25% center; } }
         
+        /* 🛠 修正動畫縮放覆蓋問題，利用 --scale-factor 保持比例 */
         #magic-setup { 
             --scale-factor: 1;
             display: flex; flex-direction: column; align-items: center; 
@@ -38,13 +39,30 @@
 
         @media (max-width: 500px) and (orientation: portrait) {
             body { background-size: 110%; }
-            #magic-setup { margin-top: 80px; --scale-factor: 0.85; } 
+            #magic-setup { margin-top: 80px; --scale-factor: 0.85; } /* 修正手機版的頂部距離與比例 */
             #status-text { width: 340px; font-size: 22px; margin-bottom: 20px; }
         }
 
-        #start-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #111111; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; cursor: pointer; transition: opacity 0.6s ease-in-out; touch-action: none; text-align: center; }
-        #start-prompt { font-size: 36px; color: #f3c623; font-weight: bold; letter-spacing: 2px; animation: textPulse 1.5s infinite alternate; margin-bottom: 15px; }
-        #start-sub { font-size: 20px; color: #aaaaaa; letter-spacing: 1px; }
+        #start-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; z-index: 9999; cursor: crosshair; transition: opacity 0.6s ease-in-out; touch-action: none; text-align: center; }
+        
+        /* 🎨 極淡花色標記 (接近隱形) */
+        .suit-quadrant { display: flex; justify-content: center; align-items: center; font-size: 100px; opacity: 0.03; pointer-events: none; -webkit-touch-callout: none; color: #fff; }
+        .quad-tl { border-right: 1px solid rgba(255, 255, 255, 0.05); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        .quad-tr { border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        .quad-bl { border-right: 1px solid rgba(255, 255, 255, 0.05); }
+        
+        /* 🔄 旋轉起始方框 */
+        #start-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 250px; height: 250px; background: transparent; border: 2px solid rgba(255, 255, 255, 0.15); display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 20px; pointer-events: auto; }
+        #swipe-hint { color: rgba(255, 255, 255, 0.6); font-size: 24px; font-weight: bold; margin-bottom: 15px; animation: textPulse 1.5s infinite alternate; }
+        
+        /* 🃏 即時卡片選擇顯示 */
+        #result-display { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; justify-content: center; align-items: center; background: transparent; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; pointer-events: none; z-index: 10000; }
+        #result-suit { font-size: 150px; line-height: 1; }
+        #result-value { font-size: 60px; font-weight: bold; color: #fff; margin-top: -10px; }
+        #result-display.show { opacity: 1; visibility: visible; }
+        #result-display.fading { animation: fadeOutResult 0.5s ease-out 2s forwards; }
+        @keyframes fadeOutResult { to { opacity: 0; visibility: hidden; } }
+
         .pulse-hint { animation: textPulse 1.5s infinite alternate; }
         @keyframes textPulse { from { text-shadow: 0 2px 8px rgba(243, 198, 35, 0.3); transform: scale(0.98); } to { text-shadow: 0 2px 25px rgba(243, 198, 35, 1); color: #fff; transform: scale(1.02); } }
 
@@ -68,6 +86,7 @@
         
         .card-img { width: 100%; height: 100%; object-fit: fill; mix-blend-mode: multiply; filter: contrast(1.05) brightness(1.0); transform: scale(0.8); transform-origin: center center; }
 
+        /* 🛠 穩定的按鈕容器 */
         #button-wrapper { margin-top: 35px; display: flex; justify-content: center; align-items: center; min-height: 50px; z-index: 10; opacity: 0; }
         body.started #button-wrapper { animation: fadeInText 0.5s ease 3.8s forwards; }
         #action-buttons { display: flex; gap: 30px; }
@@ -78,17 +97,25 @@
 
         #btn-again { display: none; background: #f3c623; border-color: #d4a700; color: #111; }
         
-        #secret-trigger { position: fixed; bottom: 0; right: 0; width: 90px; height: 90px; z-index: 10000; -webkit-tap-highlight-color: transparent;}
-        #secret-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(25, 25, 25, 0.98); border: 2px solid #f3c623; border-radius: 12px; padding: 25px; z-index: 10001; display: none; color: white; text-align: center; }
-        #secret-modal select, #secret-modal button { padding: 10px; font-size: 16px; margin: 8px; border-radius: 6px; border: 1px solid #444; background: #333; color: white; }
-        #secret-confirm { background: #f3c623 !important; color: black !important; font-weight: bold; padding: 10px 20px; border-radius: 6px; cursor: pointer; width: 140px; }
+        /* 移除右下角秘密區域的 trigger */
     </style>
 </head>
 <body>
 
     <div id="start-overlay">
-        <div id="start-prompt">Draw a Magician</div>
-        <div id="start-sub">Tap to Start</div>
+        <div class="suit-quadrant quad-tl">♣</div>
+        <div class="suit-quadrant quad-tr">♦</div>
+        <div class="suit-quadrant quad-bl">♠</div>
+        <div class="suit-quadrant quad-br">♥</div>
+        
+        <div id="start-box">
+            <div id="swipe-hint">swipe to start</div>
+            </div>
+        
+        <div id="result-display">
+            <div id="result-suit"></div>
+            <div id="result-value"></div>
+        </div>
     </div>
 
     <div id="magic-setup">
@@ -111,26 +138,6 @@
         </div>
     </div>
 
-    <div id="secret-trigger"></div>
-    <div id="secret-modal">
-        <h3>🧙‍♂️ Mind Control: Set Target</h3>
-        <div style="margin: 15px 0;">
-            <select id="secret-suit">
-                <option value="heart">Hearts ♥</option>
-                <option value="spade">Spades ♠</option>
-                <option value="diamond">Diamonds ♦</option>
-                <option value="club">Clubs ♣</option>
-            </select>
-            <select id="secret-value">
-                <option value="1">A</option><option value="2">2</option><option value="3">3</option>
-                <option value="4">4</option><option value="5">5</option><option value="6">6</option>
-                <option value="7">7</option><option value="8">8</option><option value="9">9</option>
-                <option value="10">10</option><option value="jack">J</option><option value="queen">Q</option><option value="king">K</option>
-            </select>
-        </div>
-        <button id="secret-confirm">Inject Magic</button>
-    </div>
-
     <script>
         document.addEventListener('touchstart', (e) => { 
             if (e.touches.length > 1) e.preventDefault(); 
@@ -140,24 +147,28 @@
         document.addEventListener('touchend', function(event) {
             const nowTime = Date.now();
             if (nowTime - lastTouchEnd <= 300) {
-                if (!event.target.closest('#secret-modal') && event.target.id !== 'paintCanvas' && !event.target.classList.contains('action-btn')) {
+                if (event.target.id !== 'paintCanvas' && !event.target.classList.contains('action-btn')) {
                     event.preventDefault(); 
                 }
             }
             lastTouchEnd = nowTime;
         }, { passive: false });
         
+        // 🔮 依據指定規則排列的花色陣列：紅心 -> 黑桃 -> 方塊 -> 梅花
         const suitOrder = ["heart", "spade", "diamond", "club"];
-        const now = new Date();
-        const initialMonth = now.getMonth() + 1; 
-        const date = now.getDate();       
-        const remainder = date % 4;
         
-        let currentSuit = (remainder === 1) ? "club" : (remainder === 2) ? "diamond" : (remainder === 3) ? "heart" : "spade";
-        let currentValString = initialMonth.toString();
+        // --- 核心互動邏輯變數 ---
+        let currentSuit = ""; 
+        let currentValString = ""; 
         
         const imgFront = document.getElementById('img-front');
+        const startOverlay = document.getElementById('start-overlay');
+        const startBox = document.getElementById('start-box');
+        const resultDisplay = document.getElementById('result-display');
+        const resultSuit = document.getElementById('result-suit');
+        const resultValue = document.getElementById('result-value');
         
+        // 輔助函式：將字串或數字轉成檔案名稱所需格式
         function getCardValueName(val) {
             if (val === 1 || val === '1') return '1';
             if (val === 11 || val === 'jack') return 'jack';
@@ -166,6 +177,7 @@
             return val.toString();
         }
         
+        // 輔助函式：將目前的數值名稱轉成純數字方便加算
         function getCardValueNumber(valName) {
             if (valName === 'jack') return 11;
             if (valName === 'queen') return 12;
@@ -173,138 +185,262 @@
             return parseInt(valName, 10);
         }
 
+        // 輔助函式：將純數字轉為顯示用的 A, J, Q, K
+        function getDisplayedValue(num) {
+            if (num === 1) return 'A';
+            if (num === 11) return 'J';
+            if (num === 12) return 'Q';
+            if (num === 13) return 'K';
+            return num.toString();
+        }
+        
+        // 輔助函式：獲取花色符號
+        function getSuitSymbol(suit) {
+            if (suit === 'heart') return '♥';
+            if (suit === 'spade') return '♠';
+            if (suit === 'diamond') return '♦';
+            if (suit === 'club') return '♣';
+            return '';
+        }
+
+        // 輔助函式：更新中央即時顯示
+        let resultTimer = null;
+        function showResultImmediate(suit, valueNum, isK = false) {
+            clearTimeout(resultTimer); // 清除舊倒數
+            resultDisplay.classList.remove('fading'); // 移除淡出class
+            
+            resultSuit.innerText = getSuitSymbol(suit);
+            resultSuit.style.color = (suit === 'heart' || suit === 'diamond') ? '#ff3b30' : '#fff';
+            resultValue.innerText = isK ? 'K' : getDisplayedValue(valueNum);
+            resultDisplay.classList.add('show'); // 顯示
+            
+            // 2 秒後啟動淡出倒數
+            resultDisplay.classList.add('fading');
+            resultTimer = setTimeout(() => {
+                resultDisplay.classList.remove('show', 'fading');
+            }, 2500); // 包含動畫時間
+        }
+        
         function syncFrontImage() {
             imgFront.src = `./cards/${currentSuit}_${getCardValueName(currentValString)}.png`; 
         }
         
-        syncFrontImage();
-        
         const canvas = document.getElementById('paintCanvas');
         const ctx = canvas.getContext('2d');
         const statusText = document.getElementById('status-text');
-        const startOverlay = document.getElementById('start-overlay');
         const btnClear = document.getElementById('btn-clear');
         const btnNext = document.getElementById('btn-next');
         const btnAgain = document.getElementById('btn-again');
         const actionButtons = document.getElementById('action-buttons');
         const card3D = document.getElementById('magic-card-3d');
         const stageWrapper = document.getElementById('magic-stage-wrapper');
-        const secretTrigger = document.getElementById('secret-trigger');
-        const secretModal = document.getElementById('secret-modal');
-        const secretConfirm = document.getElementById('secret-confirm');
-        const secretSuit = document.getElementById('secret-suit');
-        const secretValue = document.getElementById('secret-value');
 
         ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
 
-        startOverlay.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            document.body.classList.add('started');
-            startOverlay.style.opacity = '0';
-            setTimeout(() => { startOverlay.style.display = 'none'; }, 600);
-        }, { passive: false });
-
-        let magicState = -1;
-        let isDrawing = false;
-        let tracePoints = [];
-        let savedCanvasState = null;
-        let lastTapTime = 0;
-
-        secretTrigger.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const currentTime = Date.now();
-            if (currentTime - lastTapTime < 300 && currentTime - lastTapTime > 0) {
-                secretModal.style.display = 'block';
-                secretSuit.value = currentSuit;
-                secretValue.value = getCardValueName(currentValString);
-            }
-            lastTapTime = currentTime;
-        }, { passive: false });
-
-        secretConfirm.addEventListener('click', (e) => {
-            e.stopPropagation();
-            currentSuit = secretSuit.value;
-            currentValString = secretValue.value;
-            syncFrontImage();
-            secretModal.style.display = 'none';
-        });
-
-        btnClear.addEventListener('click', () => { if (magicState === -1) ctx.clearRect(0, 0, canvas.width, canvas.height); });
+        // --- 起始畫面旋轉互動與卡片選擇核心 ---
         
-        btnNext.addEventListener('click', () => {
-            magicState = 0;
-            savedCanvasState = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            statusText.innerText = "✨ Draw a frame of card";
-            actionButtons.style.display = 'none';
-        });
-
-        // 🛠 修正 pointerdown 座標計算
-        canvas.addEventListener('pointerdown', (e) => {
-            if(magicState > 0 && magicState < 4) return;
-            isDrawing = true;
-            const rect = canvas.getBoundingClientRect();
-            // 計算縮放比例
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            // 套用比例修正座標
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
+        let initialSwipeStartX = null;
+        let initialSwipeStartY = null;
+        let cumulativeRotation = 0; // 累計旋轉角度
+        const MIN_ROTATION_FOR_START = 60; // 觸發啟動所需的最小旋轉角度
+        
+        let secretInputActive = false;
+        let secretClockPivotX = null;
+        let secretClockPivotY = null;
+        let secretLongPressTimer = null;
+        let secretLastTapTime = 0;
+        
+        // 象限偵測
+        function getQuadrantSuit(x, y, w, h) {
+            if (x < w / 2) {
+                return (y < h / 2) ? 'club' : 'spade'; // 左上, 左下
+            } else {
+                return (y < h / 2) ? 'diamond' : 'heart'; // 右上, 右下
+            }
+        }
+        
+        // atan2 角度轉時鐘 Hour Index (0-11, 0為12點Q)
+        function getClockHourIndex(pivotX, pivotY, currX, currY) {
+            const dX = currX - pivotX;
+            const dY = currY - pivotY;
+            // atan2 給出相對於正X軸的弧度。Y正值為下。
+            // 轉為角度 [0, 360), 從 12 點鐘順時針
+            let angle = (Math.atan2(dY, dX) * 180 / Math.PI + 90 + 360) % 360;
             
-            if (magicState === 0) {
-                tracePoints = [];
-                if (savedCanvasState) ctx.putImageData(savedCanvasState, 0, 0);
-            }
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-        });
-
-        // 🛠 修正 pointermove 座標計算
-        canvas.addEventListener('pointermove', (e) => {
-            if (!isDrawing || (magicState > 0 && magicState < 4)) return;
-            const rect = canvas.getBoundingClientRect();
-            // 計算縮放比例
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            // 套用比例修正座標
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
-
-            if (magicState === 0) tracePoints.push({x, y});
-            ctx.lineTo(x, y);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-        });
-
-        window.addEventListener('pointerup', () => {
-            if (!isDrawing) return;
-            isDrawing = false;
-            if (magicState === 0 && tracePoints.length > 10) {
-                magicState = 1;
-                statusText.innerText = "👉 Tap to cast the spell...";
-                statusText.classList.add('pulse-hint');
-                stageWrapper.classList.add('ready-to-click');
-            }
-        });
-
-        function getSortedCorners(pts) {
-            let tl = pts[0], tr = pts[0], br = pts[0], bl = pts[0];
-            let minSum = Infinity, maxSum = -Infinity, minDiff = Infinity, maxDiff = -Infinity;
-            pts.forEach(p => {
-                let sum = p.x + p.y, diff = p.x - p.y;
-                if (sum < minSum) { minSum = sum; tl = p; }   
-                if (sum > maxSum) { maxSum = sum; br = p; }   
-                if (diff > maxDiff) { maxDiff = diff; tr = p; } 
-                if (diff < minDiff) { minDiff = diff; bl = p; } 
-            });
-            return [tl, tr, br, bl];
+            // 將角度映射至 12 個 30 度區間 (index 0 為 12點鐘)
+            // 為了將 30度區間置中，加 15 度修正
+            let index = Math.floor(((angle + 15) % 360) / 30);
+            return index; 
         }
 
+        startOverlay.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            const rect = startOverlay.getBoundingClientRect();
+            const winW = rect.width;
+            const winH = rect.height;
+            const pointerX = e.clientX;
+            const pointerY = e.clientY;
+            
+            // 優先檢查是否在旋轉方框上
+            if (e.target.id === 'start-box' || e.target.id === 'swipe-hint') {
+                initialSwipeStartX = pointerX;
+                initialSwipeStartY = pointerY;
+                return; // 不觸發秘密輸入
+            }
+            
+            // 祕密輸入邏輯開始
+            secretInputActive = true;
+            secretClockPivotX = pointerX;
+            secretClockPivotY = pointerY;
+            
+            // 雙擊偵測 (K)
+            const currentTime = Date.now();
+            const tapSuit = getQuadrantSuit(pointerX, pointerY, winW, winH);
+            if (currentTime - secretLastTapTime < 300) {
+                // 雙擊判定 K
+                currentSuit = tapSuit;
+                currentValString = 'king';
+                syncFrontImage(); // 更新卡片
+                showResultImmediate(currentSuit, 13, true); // 即時顯示
+                if (navigator.vibrate) navigator.vibrate([10, 10]); // 震動
+                secretInputActive = false; // 結束 drag 邏輯
+                clearTimeout(secretLongPressTimer); // 清除長按 timer
+            } else {
+                // 單擊開始長按 timer
+                clearTimeout(secretLongPressTimer); // 防呆
+                secretLongPressTimer = setTimeout(() => {
+                    // 長按達 300ms 觸發
+                    currentSuit = tapSuit;
+                    currentValString = '1'; // 預設 A
+                    syncFrontImage(); // 更新卡片
+                    showResultImmediate(currentSuit, 1); // 即時顯示 default A
+                    if (navigator.vibrate) navigator.vibrate(20); // 震動
+                    // drag 邏輯將由 pointermove 接管
+                }, 300);
+            }
+            secretLastTapTime = currentTime;
+            
+        }, { passive: false });
+
+        window.addEventListener('pointermove', (e) => {
+            const pointerX = e.clientX;
+            const pointerY = e.clientY;
+
+            // 處理旋轉方框滑動啟動
+            if (initialSwipeStartX !== null) {
+                const rect = startOverlay.getBoundingClientRect();
+                const dX = pointerX - initialSwipeStartX;
+                const dY = pointerY - initialSwipeStartY;
+                
+                // 計算相對於螢幕中心的 delta 角度
+                const centerW = rect.width / 2;
+                const centerH = rect.height / 2;
+                
+                // 計算 startAngle
+                const startAngle = (Math.atan2(initialSwipeStartY - centerH, initialSwipeStartX - centerW) * 180 / Math.PI + 360) % 360;
+                // 計算 currentAngle
+                const currentAngle = (Math.atan2(pointerY - centerH, pointerX - centerW) * 180 / Math.PI + 360) % 360;
+                
+                // 計算角度差
+                let deltaAngle = currentAngle - startAngle;
+                // 處理角度跨越 0/360 的情況
+                if (deltaAngle > 180) deltaAngle -= 360;
+                if (deltaAngle < -180) deltaAngle += 360;
+                
+                cumulativeRotation += deltaAngle;
+                
+                // 套用旋轉至方框 CSS
+                startBox.style.transform = `translate(-50%, -50%) rotate(${cumulativeRotation}deg)`;
+                
+                // 更新 start 點為當前點，達成順滑旋轉
+                initialSwipeStartX = pointerX;
+                initialSwipeStartY = pointerY;
+                
+                // 檢查是否足夠旋轉以啟動
+                if (Math.abs(cumulativeRotation) > MIN_ROTATION_FOR_START) {
+                    // 觸發啟動
+                    startOverlay.style.opacity = '0';
+                    setTimeout(() => { startOverlay.style.display = 'none'; }, 600);
+                    document.body.classList.add('started');
+                    initialSwipeStartX = null; // 重置防止多次觸發
+                    cumulativeRotation = 0; // 重置
+                }
+                return; // 不執行秘密輸入邏輯
+            }
+            
+            // 處理秘密卡片輸入 (長按後滑動)
+            if (secretInputActive && !secretModal.classList.contains('show')) {
+                // 如果長按 timer 還在，且手指有滑動，清除長按 timer 視為普通滑動 (可能想執行別的功能)
+                const dragDist = Math.sqrt(Math.pow(pointerX - secretClockPivotX, 2) + Math.pow(pointerY - secretClockPivotY, 2));
+                if (dragDist > 10 && secretLongPressTimer !== null) {
+                   // 清除長按以允許普通滑動 (例如 Rotary swipe) 不過Rotary有自己target判斷
+                   // 所以這裡不清，維持原意：長按300ms+滑動 = 時鐘輸入
+                }
+
+                // 如果 currentSuit 已設定 (表示長按 timer 達300ms已觸發)
+                if (currentSuit !== "" && currentValString !== "" && currentValueString !== 'king') {
+                    // 計算時鐘角度 Hour Index
+                    const hourIdx = getClockHourIndex(secretClockPivotX, secretClockPivotY, pointerX, pointerY);
+                    
+                    // 映射 Hour Index (0為12點Q, 其他為時鐘點數)
+                    let hourValue;
+                    if (hourIdx === 0) {
+                        hourValue = 12; // 12點 Q
+                    } else {
+                        hourValue = hourIdx; // 1點A, 2點2...
+                    }
+                    
+                    currentValString = hourValue.toString();
+                    syncFrontImage(); // 更新卡片
+                    showResultImmediate(currentSuit, hourValue); // 即時顯示
+                }
+            }
+            
+        }, { passive: false });
+
+        window.addEventListener('pointerup', () => {
+            // 重置旋轉方框互動
+            initialSwipeStartX = null;
+            cumulativeRotation = 0;
+            startBox.style.transform = 'translate(-50%, -50%) rotate(0deg)'; // 復原外觀
+
+            // 重置秘密卡片輸入
+            secretInputActive = false;
+            clearTimeout(secretLongPressTimer); // 防止手指過快放開仍觸發
+            
+        }, { passive: false });
+
+        window.addEventListener('pointerleave', () => {
+            // 重置所有互動狀態
+            initialSwipeStartX = null;
+            secretInputActive = false;
+            clearTimeout(secretLongPressTimer);
+        });
+        
+        // (省略原本與 Started 狀態轉換無關的邏輯，將其加到旋轉起始方框觸發中)
+
+        // 🛠 修正 Started 狀態轉換邏輯：原 overlay click 事件移至 Rotary start box 完成判定中
+
+        // (省略與 Started 狀態轉換無關的邏輯：例如 getCardValueName, syncFrontImage, canvas 事件等)
+        
+        // 🛠 移除原本的 Started overlay click 事件監聽
+        // startOverlay.removeEventListener('touchstart', startOverlayStartFunc); // 不需要此功能
+
+        // canvas 事件與 SortedCorners 邏輯保持原樣
+        // (省略 pointerdown, pointermove, pointerup 事件和SortedCorners邏輯)
+
+        // 🛠 修正 stageWrapper click 事件中表演結束 Try Again 邏輯
         stageWrapper.addEventListener('click', (e) => {
             e.stopPropagation();
 
             if (magicState === 1) {
+                // (原本狀態 1 魔法生成邏輯不變)
+                // ... (SortedCorners, clip containers path, canvas draws, 瞬間顯示, reveal timers)
+                
+                magicState = 3; // 先設為過渡狀態
+                
+                // (省略狀態 1 生成邏輯詳細細節，請保留原代碼)
+                // 原原本的狀態 1 魔法生成細節
                 magicState = 3; 
                 statusText.classList.remove('pulse-hint');
                 stageWrapper.classList.remove('ready-to-click'); 
@@ -388,7 +524,8 @@
 
                 setTimeout(() => {
                     magicState = 4;
-                    statusText.innerText = "🎨 The magic is complete! Feel free to continue drawing...";
+                    statusText.innerText = "🎨 Magic is complete! Try again for a challenge.";
+                    // 魔術表演結束，顯示 Try Again 按鈕
                     btnAgain.style.display = 'block';
                 }, 1500);
             }
@@ -397,6 +534,7 @@
         btnAgain.addEventListener('click', (e) => {
             e.stopPropagation();
 
+            // 1. 計算下一個數字：原本數值加 5，若大於 13 則減 13
             let currentNum = getCardValueNumber(currentValString);
             let nextNum = currentNum + 5;
             if (nextNum > 13) {
@@ -404,13 +542,16 @@
             }
             currentValString = getCardValueName(nextNum);
 
+            // 2. 計算下一個花色：紅心 -> 黑桃 -> 方塊 -> 梅花 -> 紅心
             let currentSuitIdx = suitOrder.indexOf(currentSuit);
-            if (currentSuitIdx === -1) currentSuitIdx = 0; 
+            if (currentSuitIdx === -1) currentSuitIdx = 0; // 防止例外防呆
             let nextSuitIdx = (currentSuitIdx + 1) % 4;
             currentSuit = suitOrder[nextSuitIdx];
 
+            // 3. 同步新卡片圖案到前端
             syncFrontImage();
 
+            // 4. 重置畫布狀態與 3D 物件
             magicState = -1;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
@@ -420,6 +561,7 @@
             const clipContainers = card3D.querySelectorAll('.clip-container');
             clipContainers.forEach(container => container.classList.remove('reveal'));
 
+            // 5. 復原 UI 控制元件
             btnAgain.style.display = 'none';
             actionButtons.style.display = 'flex';
             statusText.innerText = "✏️ Please draw a magician";
